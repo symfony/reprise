@@ -1,0 +1,269 @@
+---------------------------------------------------------------------------
+
+by Kocal at 2026-08-19T09:35:59Z
+
+Ahah, I see the Jolicode team is here! :D
+
+Thanks for considering Reprise, I just pushed the following patch containing minor modifs (changelog, tests, ...):
+
+```diff
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index ca2ce18..31ccde9 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,8 +1,9 @@
+ # CHANGELOG
+
+-## Unreleased
++## 0.8.0
+
+-- Add a per-entry `hash` option to `copy` (default `true`): when `false`, the copied file keeps its logical path on disk and the content hash moves to the `manifest.json` value as a query string, like Encore's `copyFiles()` allowed
++- Add a per-entry `hash` option to `copy`: set it to `false` and the copied file keeps its logical path on disk, with the content hash moving to the `manifest.json` value as a query string, the way Encore's `copyFiles()` allows
++- Allow an empty `to` on a `copy` entry to copy files at the root of `outputPath`
+
+ ## 0.7.0
+
+diff --git a/assets/src/core/copy.ts b/assets/src/core/copy.ts
+index 92155dd..dcab934 100644
+--- a/assets/src/core/copy.ts
++++ b/assets/src/core/copy.ts
+@@ -7,7 +7,7 @@ import { joinUrl } from './format';
+ export interface CopyResult {
+     /** Path used for the manifest key, e.g. `images/icons/cat.svg`. */
+     logicalName: string;
+-    /** Path written under outputPath: hashed in build (verbatim for `hash: false` entries and in dev). */
++    /** Path written under outputPath: content-hashed in build, verbatim in dev and for `hash: false` entries. */
+     physicalName: string;
+     /** `?<contenthash>` appended to the manifest value for `hash: false` entries in build, `''` otherwise. */
+     versionQuery: string;
+@@ -62,15 +62,10 @@ export function resolveCopyFiles(entries: ResolvedCopyEntry[], build: boolean):
+     return enumerateCopyFiles(entries).map(({ absPath, logicalName, hash }) => {
+         const source = readFileSync(absPath);
+         if (!build) return { logicalName, physicalName: logicalName, versionQuery: '', source };
+-        if (hash) {
+-            return {
+-                logicalName,
+-                physicalName: hashedName(logicalName, contentHash(source)),
+-                versionQuery: '',
+-                source,
+-            };
+-        }
+-        return { logicalName, physicalName: logicalName, versionQuery: `?${contentHash(source)}`, source };
++        const version = contentHash(source);
++        return hash
++            ? { logicalName, physicalName: hashedName(logicalName, version), versionQuery: '', source }
++            : { logicalName, physicalName: logicalName, versionQuery: `?${version}`, source };
+     });
+ }
+
+diff --git a/assets/src/index.ts b/assets/src/index.ts
+index 6a612ef..448796a 100644
+--- a/assets/src/index.ts
++++ b/assets/src/index.ts
+@@ -1,5 +1,6 @@
+ import type { UnpluginFactory } from 'unplugin';
+ import type { RspackStats } from './collectors/rspack';
++import type { CopyResult } from './core/copy';
+ import type { BuildContext, ManifestJson, NormalizedGraph, Options } from './types';
+ import { writeFileSync } from 'node:fs';
+ import { join } from 'node:path';
+@@ -237,6 +238,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
+                         // Build: emit copied files into the compilation so Rspack writes/cleans them and
+                         // `sourceFilename` lets statsToGraph key them in the manifest. Dev writes them to disk in
+                         // `done` instead (served by Symfony, not the dev server), so they aren't in-memory assets.
++                        // Resolved per compilation, so a rebuild picks up edits to the copied files.
++                        let copiedInBuild: CopyResult[] = [];
+                         if (!isDev) {
+                             c.hooks.thisCompilation.tap('@symfony/reprise:copy', (compilation) => {
+                                 compilation.hooks.processAssets.tap(
+@@ -245,7 +248,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
+                                         stage: c.rspack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+                                     },
+                                     () => {
+-                                        for (const file of resolveCopyFiles(resolved.copy, true)) {
++                                        copiedInBuild = resolveCopyFiles(resolved.copy, true);
++                                        for (const file of copiedInBuild) {
+                                             compilation.emitAsset(
+                                                 file.physicalName,
+                                                 new c.rspack.sources.RawSource(file.source),
+@@ -290,15 +294,16 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
+                                     resolved.integrity.algorithms
+                                 );
+                             }
+-                            // Copied files: build emits them into the compilation (statsToGraph keys them); dev isn't
+-                            // emitted, so write them to disk and key them here.
++                            // Copied files: build emits them into the compilation, so statsToGraph already keys them,
++                            // but only `copyManifest` knows the `hash: false` version query, hence the overlay. Dev
++                            // isn't emitted, so write them to disk and key them here.
+                             let manifest: ManifestJson;
+                             if (isDev) {
+                                 const copyFiles = resolveCopyFiles(resolved.copy, false);
+                                 writeCopyFiles(copyFiles, resolved.outputPath);
+                                 manifest = copyManifest(copyFiles, resolved);
+                             } else {
+-                                manifest = buildManifest(graph, ctx);
++                                manifest = { ...buildManifest(graph, ctx), ...copyManifest(copiedInBuild, resolved) };
+                             }
+                             try {
+                                 writeSymfonyFiles(resolved.outputPath, buildEntrypoints(graph, ctx), manifest);
+diff --git a/assets/src/types.ts b/assets/src/types.ts
+index b4b5cec..78ae5b7 100644
+--- a/assets/src/types.ts
++++ b/assets/src/types.ts
+@@ -146,11 +146,9 @@ export interface CopyEntry {
+     /** Recurse into subdirectories of `from`. Default: true. */
+     includeSubdirectories?: boolean;
+     /**
+-     * Content-hash the emitted filename. Default: true.
+-     *
+-     * When false, the file keeps its logical path on disk and the content hash
+-     * moves to the manifest value as a query string (Encore's `copyFiles()`
+-     * contract) — for files referenced by a stable path outside the manifest.
++     * Content-hash the emitted filename. Default: true. Set it to false for files referenced by a
++     * stable path outside the manifest: the file keeps its logical path and the hash moves to the
++     * manifest value as a query string, as Encore's `copyFiles()` allowed.
+      */
+     hash?: boolean;
+ }
+diff --git a/assets/test/integration/copy.test.ts b/assets/test/integration/copy.test.ts
+index 8f4d906..af849a4 100644
+--- a/assets/test/integration/copy.test.ts
++++ b/assets/test/integration/copy.test.ts
+@@ -51,6 +51,26 @@ describe('vite copy', () => {
+         expect(existsSync(join(out, 'images/logo.svg'))).toBe(true);
+     }, 30_000);
+
++    it('build: an empty `to` copies at the root of outputPath', async () => {
++        const out = mkdtempSync(join(tmpdir(), 'ups-copy-vite-root-'));
++        await build({
++            root: fixture,
++            logLevel: 'silent',
++            build: { emptyOutDir: true, rollupOptions: { input: { app: join(fixture, 'app.js') } } },
++            plugins: [
++                SymfonyVite({
++                    outputPath: out,
++                    publicPath: '/build/',
++                    copy: [{ from: copySrc, to: '', hash: false }],
++                }),
++            ],
++        });
++
++        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
++        expect(manifest['build/logo.svg']).toMatch(/^\/build\/logo\.svg\?[0-9a-f]{8}$/);
++        expect(existsSync(join(out, 'logo.svg'))).toBe(true);
++    }, 30_000);
++
+     it('build: no copy option leaves the manifest without image keys', async () => {
+         const out = mkdtempSync(join(tmpdir(), 'ups-copy-vite-off-'));
+         await build({
+@@ -164,24 +184,50 @@ describe('rsbuild copy', () => {
+     }, 60_000);
+
+     it('build: `hash: false` entries keep their logical path, versioned in the manifest query', async () => {
+-        const out = mkdtempSync(join(tmpdir(), 'ups-copy-vite-nohash-'));
+-        await build({
+-            root: fixture,
+-            logLevel: 'silent',
+-            build: { emptyOutDir: true, rollupOptions: { input: { app: join(fixture, 'app.js') } } },
+-            plugins: [
+-                SymfonyVite({
+-                    outputPath: out,
+-                    publicPath: '/build/',
+-                    copy: [{ from: copySrc, to: 'images', hash: false }],
+-                }),
+-            ],
++        const out = mkdtempSync(join(tmpdir(), 'ups-copy-rsbuild-nohash-'));
++        const rsbuild = await createRsbuild({
++            cwd: fixture,
++            rsbuildConfig: {
++                mode: 'production',
++                source: { entry: { app: join(fixture, 'app.js') } },
++                plugins: [
++                    SymfonyRsbuild({
++                        outputPath: out,
++                        publicPath: '/build/',
++                        copy: [{ from: copySrc, to: 'images', hash: false }],
++                    }),
++                ],
++            },
+         });
++        await rsbuild.build();
+
+         const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+         expect(manifest['build/images/logo.svg']).toMatch(/^\/build\/images\/logo\.svg\?[0-9a-f]{8}$/);
+         expect(existsSync(join(out, 'images/logo.svg'))).toBe(true);
+-    }, 30_000);
++    }, 60_000);
++
++    it('build: an empty `to` copies at the root of outputPath', async () => {
++        const out = mkdtempSync(join(tmpdir(), 'ups-copy-rsbuild-root-'));
++        const rsbuild = await createRsbuild({
++            cwd: fixture,
++            rsbuildConfig: {
++                mode: 'production',
++                source: { entry: { app: join(fixture, 'app.js') } },
++                plugins: [
++                    SymfonyRsbuild({
++                        outputPath: out,
++                        publicPath: '/build/',
++                        copy: [{ from: copySrc, to: '', hash: false }],
++                    }),
++                ],
++            },
++        });
++        await rsbuild.build();
++
++        const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
++        expect(manifest['build/logo.svg']).toMatch(/^\/build\/logo\.svg\?[0-9a-f]{8}$/);
++        expect(existsSync(join(out, 'logo.svg'))).toBe(true);
++    }, 60_000);
+
+     it('build: no copy option leaves the manifest without image keys', async () => {
+         const out = mkdtempSync(join(tmpdir(), 'ups-copy-rsbuild-off-'));
+diff --git a/doc/index.rst b/doc/index.rst
+index f01cdbf..023efa2 100644
+--- a/doc/index.rst
++++ b/doc/index.rst
+@@ -324,14 +324,16 @@ manifest (below), the ``asset()`` helper resolves the logical path to the hashed
+     })
+
+ ``from`` and ``to`` are both required: ``from`` is the source directory (relative to your project root), ``to`` is
+-the destination prefix used for the manifest key. Restrict which files are copied with ``pattern``, a regular
+-expression tested against each file's path relative to ``from`` (by default every file is copied).
+-``includeSubdirectories`` defaults to ``true``; set it to ``false`` to turn off recursion.
++the destination prefix used for the manifest key. Pass an empty ``to`` to copy the files at the root of
++``outputPath``, for things like ``favicon.ico`` or ``site.webmanifest`` that have to live at a fixed URL. Restrict
++which files are copied with ``pattern``, a regular expression tested against each file's path relative to ``from``
++(by default every file is copied). ``includeSubdirectories`` defaults to ``true``; set it to ``false`` to turn off
++recursion.
+
+-Some copied files must keep a stable path on disk: templates referencing them by a hardcoded
+-``asset('/build/images/logo.svg')``, code reading them from a predictable location, CDN rules… Set ``hash: false``
+-on the entry to keep the logical path verbatim; the content hash then moves to the ``manifest.json`` value as a
+-query string, so cache-busting through ``asset()`` keeps working:
++Some copied files have to keep a stable path on disk: templates referencing them through a hardcoded
++``asset('/build/images/logo.svg')``, code reading them from a predictable location, CDN rules, and so on. Set
++``hash: false`` on the entry and the file keeps its logical path. The content hash then moves to the
++``manifest.json`` value as a query string, so cache-busting through ``asset()`` still works:
+
+ .. code-block:: javascript
+
+@@ -347,12 +349,12 @@ query string, so cache-busting through ``asset()`` keeps working:
+
+     { "build/images/logo.svg": "/build/images/logo.svg?87dcc351" }
+
+-Note that proxies or CDNs configured to ignore query strings will not pick up new versions of these files — which
+-is why hashed filenames remain the default.
++Be aware that proxies or CDNs configured to ignore query strings will not pick up new versions of these files.
++That is why hashed filenames remain the default.
+
+ How copied files are handled depends on the mode:
+
+-- **Build**: each file gets a content hash in its filename for cache busting.
++- **Build**: each file gets a content hash in its filename for cache busting, unless the entry sets ``hash: false``.
+ - **Dev**: files are copied verbatim, no hash.
+
+ Either way they land in ``public/build`` and are served by the Symfony web server, not the Vite/Rsbuild dev server,
+```
+
+Merging and releasing when the CI is green
