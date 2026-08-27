@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.1.0
+
+- Add support for the top-level `input` option in dev mode, added in Vite 8.2
+
+## 1.0.0
+
+Stable release! 🎉
+
 ## 0.8.0
 
 - Add a per-entry `hash` option to `copy` (default `true`): with `hash: false` the file is emitted at its logical path instead of a content-hashed one, and the hash moves to the `manifest.json` value as a `?<contenthash>` query string

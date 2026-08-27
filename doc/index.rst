@@ -56,13 +56,8 @@ Vite
     import Symfony from '@symfony/reprise/vite'
 
     export default defineConfig({
-      build: {
-        // On Vite 7 or older, use `rollupOptions` instead
-        rolldownOptions: {
-          input: {
-            app: './assets/app.js',
-          },
-        },
+      input: {
+        app: './assets/app.js',
       },
       plugins: [
         Symfony({
@@ -70,6 +65,8 @@ Vite
         }),
       ],
     })
+
+On Vite 8.1 and older, configure the entries with ``build.rollupOptions.input`` instead.
 
 Rsbuild
 ~~~~~~~
@@ -515,12 +512,8 @@ Give the widget its own config, pointing the plugin at a separate output directo
     import Symfony from '@symfony/reprise/vite'
 
     export default defineConfig({
-      build: {
-        rolldownOptions: {
-          input: {
-            widget: './assets/widget.js',
-          },
-        },
+      input: {
+        widget: './assets/widget.js',
       },
       plugins: [
         Symfony({
@@ -691,18 +684,18 @@ Your build config
 Most of ``webpack.config.js`` has no equivalent, because the bundler already does the work. The Symfony glue Encore
 layered on top of Webpack stays, as a Reprise plugin option:
 
-=========================================  ===========================================================================================
+=========================================  ============================================================================================
 Webpack Encore                             Reprise
-=========================================  ===========================================================================================
+=========================================  ============================================================================================
 ``setOutputPath()`` / ``setPublicPath()``  plugin ``outputPath`` / ``publicPath`` (the defaults fit a standard project)
 ``setManifestKeyPrefix()``                 plugin ``manifestKeyPrefix`` (see `Using a CDN`_)
-``addEntry()`` / ``addEntries()``          the bundler's own entry input: Vite ``build.rollupOptions.input``, Rsbuild ``source.entry``
+``addEntry()`` / ``addEntries()``          Vite ``input`` (Vite 8.1 and older: ``build.rollupOptions.input``); Rsbuild ``source.entry``
 ``enableVersioning()``                     nothing to do, content hashing is on by default
 ``enableIntegrityHashes()``                plugin ``integrity: { enabled: true }`` (see `Subresource Integrity`_)
 ``copyFiles()``                            plugin ``copy: [ ... ]`` (see `File copy`_)
 ``enableStimulusBridge()``                 plugin ``stimulus: 'assets/controllers.json'`` (see `Symfony UX / Stimulus controllers`_)
 ``configureDevServerOptions()``            nothing to do: run ``vite`` or ``rsbuild dev`` and Reprise points Twig at it
-=========================================  ===========================================================================================
+=========================================  ============================================================================================
 
 Everything Vite and Rsbuild handle themselves, you drop:
 

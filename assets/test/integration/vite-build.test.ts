@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { build } from 'vite';
 import { describe, expect, it } from 'vitest';
 import Symfony from '../../src/vite';
+import { hasTopLevelInput } from '../vite-version';
 
 const fixture = join(import.meta.dirname, '../fixtures/basic');
 
@@ -69,4 +70,28 @@ describe('vite build emits Symfony files', () => {
         expect(css).toContain('/build/');
         expect(css).not.toMatch(/url\(\/logo/); // must NOT reference /logo… at the root
     }, 30_000);
+});
+
+describe('vite top-level input', () => {
+    it.skipIf(!hasTopLevelInput)(
+        'emits Symfony files from the top-level input',
+        async () => {
+            const out = mkdtempSync(join(tmpdir(), 'ups-top-level-input-'));
+            await build({
+                root: fixture,
+                logLevel: 'silent',
+                input: { app: join(fixture, 'app.js'), admin: join(fixture, 'admin.js') },
+                build: { emptyOutDir: true },
+                plugins: [Symfony({ outputPath: out, publicPath: '/build/' })],
+            });
+
+            const entry = JSON.parse(readFileSync(join(out, 'entrypoints.json'), 'utf8'));
+            expect(Object.keys(entry.entryPoints).sort()).toEqual(['admin', 'app']);
+            expect(entry.entryPoints.app.js[0]).toMatch(/^build\/app-.*\.js$/);
+
+            const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+            expect(manifest['build/app.js']).toMatch(/^\/build\/app-.*\.js$/);
+        },
+        30_000
+    );
 });

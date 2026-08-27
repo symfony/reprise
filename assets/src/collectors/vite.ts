@@ -90,6 +90,7 @@ const CSS_EXTS = new Set(['.css', '.scss', '.sass', '.less', '.styl', '.stylus',
 
 export interface DevConfig {
     root: string;
+    input?: Rollup.InputOption;
     build: {
         rolldownOptions?: { input?: Rollup.InputOption };
         rollupOptions?: { input?: Rollup.InputOption };
@@ -98,9 +99,9 @@ export interface DevConfig {
 
 export function configToDevGraph(config: DevConfig): NormalizedGraph {
     const entryPoints: Record<string, EntryFiles> = {};
-    // rolldown-vite renamed `build.rollupOptions` to `build.rolldownOptions`; prefer the new key and
-    // fall back to the deprecated one so both current Vite and rolldown-vite keep working.
-    const input = config.build.rolldownOptions?.input ?? config.build.rollupOptions?.input;
+    // Three entry keys: rolldown-vite's `rolldownOptions`, Vite 7's `rollupOptions`, Vite 8's top-level
+    // `input`. Nested first because `vite build` resolves it first, so dev names the entries the build does.
+    const input = config.build.rolldownOptions?.input ?? config.build.rollupOptions?.input ?? config.input;
     const entries: Record<string, string> =
         typeof input === 'object' && input !== null && !Array.isArray(input) ? (input as Record<string, string>) : {};
 
