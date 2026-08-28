@@ -253,6 +253,26 @@ describe('configToDevGraph', () => {
         expect(graph.entryPoints.app).toEqual({ js: ['assets/app.js'], css: [], preload: [], dynamic: [] });
     });
 
+    it('reads the top-level input when nested build input is absent', () => {
+        const graph = configToDevGraph({
+            root: '/app',
+            input: { app: '/app/assets/app.js' },
+            build: {},
+        });
+        expect(graph.entryPoints.app).toEqual({ js: ['assets/app.js'], css: [], preload: [], dynamic: [] });
+    });
+
+    it('prefers nested build input over the top-level input', () => {
+        const graph = configToDevGraph({
+            root: '/app',
+            input: { topLevel: '/app/assets/top-level.js' },
+            build: { rolldownOptions: { input: { app: '/app/assets/app.js' } } },
+        });
+        expect(graph.entryPoints).toEqual({
+            app: { js: ['assets/app.js'], css: [], preload: [], dynamic: [] },
+        });
+    });
+
     it('prefers rolldownOptions.input over the deprecated rollupOptions', () => {
         const graph = configToDevGraph({
             root: '/app',
