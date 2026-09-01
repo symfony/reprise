@@ -86,12 +86,16 @@ describe('generateControllersModule — local', () => {
         expect(src).toContain(posix(join(root, 'controllers/preserved_comment_controller.js')));
     });
 
-    it('ignores a lazy marker that sits above the imports (it must be directly above the class)', () => {
+    it('detects the lazy marker wherever it sits in the file, not only above the class', () => {
         const src = generateControllersModule(localOpts, root, false);
-        // The marker in `above_imports_controller.js` precedes the imports, not the class,
-        // so the controller stays eager rather than becoming a lazy dynamic import.
-        expect(src).toMatch(/"above-imports": controller_\d+/);
-        expect(src).not.toContain(`"above-imports": () => import(`);
+        expect(src).toContain(`"above-imports": () => import(`);
+        expect(src).toContain(posix(join(root, 'controllers/above_imports_controller.js')));
+    });
+
+    it('detects the lazy marker on a dummy controller that exports something other than a class', () => {
+        const src = generateControllersModule(localOpts, root, false);
+        expect(src).toContain(`"dummy": () => import(`);
+        expect(src).toContain(posix(join(root, 'controllers/dummy_controller.js')));
     });
 
     it('maps nested controllers with a double-dash identifier', () => {
@@ -115,11 +119,12 @@ describe('generateControllersModule — local', () => {
         expect(identifiers).toEqual([
             // eagerControllers: third-party first, then local controllers sorted by filename
             'acme--ux-hello--hello',
-            'above-imports',
             'admin--user',
             'greet',
             // lazyControllers: third-party first, then local controllers sorted by filename
             'acme--ux-map--map',
+            'above-imports',
+            'dummy',
             'heavy',
             'preserved-comment',
             'single-line',
