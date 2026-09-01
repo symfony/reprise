@@ -1,7 +1,7 @@
 {
   "name": "@symfony/reprise",
   "type": "module",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Symfony asset integration for Vite and Rsbuild, a reprise of Webpack Encore.",
   "license": "MIT",
   "author": {
