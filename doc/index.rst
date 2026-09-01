@@ -229,8 +229,8 @@ Then start the app from your entry:
 
 **Local controllers.** Any ``assets/controllers/*_controller.{js,ts}`` is registered automatically. The filename
 becomes the identifier (``hello_controller.js`` becomes ``hello``, ``admin/user_controller.js`` becomes
-``admin--user``). To load a controller on demand, put a ``stimulusFetch: 'lazy'`` comment directly above the
-class; a block or a single-line comment both work.
+``admin--user``). To load a controller on demand, put a ``stimulusFetch: 'lazy'`` comment anywhere in the file; a
+block or a single-line comment both work, even on dummy controllers that export a plain value instead of a class.
 
 .. code-block:: javascript
 
@@ -239,8 +239,8 @@ class; a block or a single-line comment both work.
     /* stimulusFetch: 'lazy' */
     export default class extends Controller {}
 
-(``// stimulusFetch: 'lazy'`` on the line above the class works too, as does a preserved
-``/*! stimulusFetch: 'lazy' */`` comment: the form tsc and esbuild keep through minification.)
+(``// stimulusFetch: 'lazy'`` works too, and so does a preserved ``/*! stimulusFetch: 'lazy' */`` comment: the form
+tsc and esbuild keep through minification.)
 
 **Third-party UX packages.** Controllers declared in ``controllers.json`` are resolved from ``node_modules``, so
 install them with your package manager, the same as you would with Webpack Encore. For example, with Stimulus and

@@ -39,14 +39,10 @@ interface ResolvedController {
     autoimports: string[];
 }
 
-// A controller opts into lazy loading with a `stimulusFetch: 'lazy'` comment directly above the
-// class (line/block comment, either quotes, `/*!...*/` survives minification) — recognised only
-// when the class is the very next code, so a stray marker elsewhere doesn't count:
-//
-//   /* stimulusFetch: 'lazy' */
-//   export default class extends Controller {}
-const LAZY_COMMENT_RE =
-    /(?:\/\*!?\s*stimulusFetch:\s*['"]lazy['"]\s*\*\/|\/\/\s*stimulusFetch:\s*['"]lazy['"])\s*(?:export\s+(?:default\s+)?)?(?:abstract\s+)?class\b/i;
+// A controller opts into lazy loading with a `stimulusFetch: 'lazy'` comment anywhere in the file
+// (line/block comment, either quotes, `/*!...*/` survives minification), like @symfony/stimulus-bridge.
+// The marker is not tied to a class: a dummy controller exporting a plain value opts in the same way.
+const LAZY_COMMENT_RE = /\/\*!?\s*stimulusFetch:\s*['"]lazy['"]\s*\*\/|\/\/\s*stimulusFetch:\s*['"]lazy['"]/i;
 const LOCAL_CONTROLLER_RE = /[-_]controller\.[jt]s$/;
 
 // Every other failure in this module reports a `@symfony/reprise:` error; a missing or malformed
