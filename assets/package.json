@@ -86,7 +86,7 @@
   "devDependencies": {
     "@hotwired/stimulus": "^3.2.2",
     "@rsbuild/core": "^2.1.13",
-    "@rspack/core": "~2.1.10",
+    "@rspack/core": "~2.2.1",
     "@tsconfig/node22": "^22.0.6",
     "@types/node": "^26.2.0",
     "@vitejs/plugin-react": "^6.0.5",
