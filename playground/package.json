@@ -46,6 +46,6 @@
     "unplugin": "^3.3.0",
     "vite": "^8.2.1",
     "vite-plugin-inspect": "^12.0.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }
