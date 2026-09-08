@@ -227,6 +227,19 @@ Then start the app from your entry:
 
     const app = startStimulusApp()
 
+**Registering extra controllers.** ``startStimulusApp()`` returns the Stimulus ``Application`` it started, so you
+can keep it and register controllers that are not declared in ``controllers.json`` and do not live in your
+controllers directory, the same way you would with Webpack Encore:
+
+.. code-block:: javascript
+
+    import { startStimulusApp } from '@symfony/reprise/stimulus'
+    import Clipboard from '@stimulus-components/clipboard'
+
+    const app = startStimulusApp()
+
+    app.register('clipboard', Clipboard)
+
 **Local controllers.** Any ``assets/controllers/*_controller.{js,ts}`` is registered automatically. The filename
 becomes the identifier (``hello_controller.js`` becomes ``hello``, ``admin/user_controller.js`` becomes
 ``admin--user``). To load a controller on demand, put a ``stimulusFetch: 'lazy'`` comment anywhere in the file; a
