@@ -1,0 +1,11 @@
+---------------------------------------------------------------------------
+
+by Kocal at 2026-09-11T06:14:34Z
+
+Thanks! I just pushed a few changes on top of this PR:
+- Rsbuild now deletes the style entry's leftover JS file on build, matching Vite and Encore.
+- Tests now check the actual build output on disk, not just the JSON files.
+- Added an integration test on both bundlers for a CSS Module imported from a JS entry.
+- Added a CSS Module demo in the playground with e2e tests for the style entry and hashed class name.
+- Cleaned up `statsToGraph`: entries are derived from Rspack's config, no duplicated query-string helper, `RspackEntry` matches Rspack's real shape.
+- Tightened the docs and added a CHANGELOG entry for 1.1.3.
