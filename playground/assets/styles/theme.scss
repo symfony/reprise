@@ -1,0 +1,16 @@
+// A *style entry*: `theme` is registered as an entry pointing straight at this file, with no JS behind it
+// (Encore's `addStyleEntry`). Scoped to `.theme-card` so the page-specific entry never repaints other pages.
+$accent: #7c3aed;
+$accent-strong: #5b21b6;
+
+.theme-card {
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 2px dashed rgba($accent, 0.5);
+    background: rgba($accent, 0.08);
+    color: $accent;
+
+    strong {
+        color: $accent-strong;
+    }
+}

@@ -59,3 +59,42 @@ describe('statsToGraph', () => {
         expect(graph.entryPoints.app.css).toEqual(['app.b2.css#frag']);
     });
 });
+
+describe('statsToGraph with style entries', () => {
+    const stats = {
+        entrypoints: {
+            theme: { assets: [{ name: 'theme.a1.js' }, { name: 'theme.b2.css' }] },
+            mixed: { assets: [{ name: 'mixed.c3.js' }, { name: 'mixed.d4.css' }] },
+            empty: { assets: [{ name: 'empty.e5.js' }] },
+        },
+        assetsByChunkName: {
+            theme: ['theme.a1.js', 'theme.b2.css'],
+            mixed: ['mixed.c3.js', 'mixed.d4.css'],
+            empty: ['empty.e5.js'],
+        },
+    };
+    const entryConfig = {
+        theme: { import: ['/app/assets/styles/theme.scss'] },
+        mixed: { import: ['/app/assets/admin.js', '/app/assets/admin.scss'] },
+        empty: { import: [] },
+    };
+
+    it('drops the runtime-only js of a stylesheet entry from the entry and the manifest', () => {
+        const graph = statsToGraph(stats, entryConfig);
+        expect(graph.entryPoints.theme).toEqual({ js: [], css: ['theme.b2.css'], preload: [], dynamic: [] });
+        expect(graph.assets).toContainEqual({ logicalName: 'theme.css', fileName: 'theme.b2.css' });
+        expect(graph.assets).not.toContainEqual({ logicalName: 'theme.js', fileName: 'theme.a1.js' });
+    });
+
+    it('keeps the js of entries not built purely from stylesheets', () => {
+        const graph = statsToGraph(stats, entryConfig);
+        expect(graph.entryPoints.mixed.js).toEqual(['mixed.c3.js']);
+        expect(graph.entryPoints.empty.js).toEqual(['empty.e5.js']);
+    });
+
+    it('keeps every js when no entry config is available', () => {
+        const graph = statsToGraph(stats);
+        expect(graph.entryPoints.theme.js).toEqual(['theme.a1.js']);
+        expect(graph.assets).toContainEqual({ logicalName: 'theme.js', fileName: 'theme.a1.js' });
+    });
+});

@@ -14,6 +14,8 @@ const publicPath = process.env.CDN_BASE ?? '/build/'
 const input = {
   app: resolve(__dirname, './assets/app.ts'),
   admin: resolve(__dirname, './assets/admin.ts'),
+  // A style entry: a stylesheet as the entry input, so it builds to CSS with no JS attached.
+  theme: resolve(__dirname, './assets/styles/theme.scss'),
 }
 
 // The top-level `input` option landed in Vite 8.2; the E2E matrix still runs Vite 7.

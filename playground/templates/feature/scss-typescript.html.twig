@@ -1,8 +1,26 @@
 {% extends 'page.html.twig' %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    {{ reprise_entry_link_tags('theme') }}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {# A style entry has no JavaScript, so this renders nothing at all. #}
+    {{ reprise_entry_script_tags('theme') }}
+{% endblock %}
+
 {% block content %}
     <twig:Panel>
         <p>The <code>app</code> entry is <code>assets/app.ts</code> (TypeScript); its styling is <strong>Tailwind CSS v4</strong> (<code>@import "tailwindcss"</code>), compiled by each bundler's official plugin: <code>@tailwindcss/vite</code> for Vite, <code>@rsbuild/plugin-tailwindcss</code> for Rsbuild.</p>
         <p>The <code>admin</code> entry keeps a <code>.scss</code> file (Sass variables + nesting) so Sass is exercised too. Reprise compiles none of this: the bundlers handle TypeScript, Tailwind, and Sass (via <code>sass-embedded</code> and <code>@rsbuild/plugin-sass</code>) natively.</p>
     </twig:Panel>
+
+    <div class="theme-card">
+        <p><strong>Style entry.</strong> The card you are looking at is styled by <code>theme</code>, an entry that points straight at <code>assets/styles/theme.scss</code> with no JavaScript behind it (Webpack Encore called this <code>addStyleEntry()</code>). This page calls both <code>reprise_entry_link_tags('theme')</code> and <code>reprise_entry_script_tags('theme')</code>: the first renders the <code>&lt;link&gt;</code>, the second renders nothing, because a style entry has no JS to load.</p>
+    </div>
+
+    <p class="mt-4 text-slate-500">The other way round, a <strong>CSS Module</strong>: <code>assets/styles/card.module.scss</code> is imported by <code>card_module_controller.js</code>, which rides along in the <code>app</code> entry. Its class name is hashed at build time, so no template can spell it out — the controller applies <code>styles.badge</code> when the element connects. Inspect the badge below and you'll see the generated name.</p>
+    <p class="mt-3"><span data-controller="card-module">Scoped by a CSS Module</span></p>
 {% endblock %}

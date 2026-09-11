@@ -1,7 +1,7 @@
 import type { Rollup } from 'vite';
 import type { AssetEntry, EntryFiles, NormalizedGraph } from '../types';
-import { extname, relative, resolve } from 'node:path';
-import { slash } from '../core/paths';
+import { relative, resolve } from 'node:path';
+import { isStylesheet, slash } from '../core/paths';
 
 interface ViteChunkMetadata {
     importedCss: Set<string>;
@@ -25,13 +25,16 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
             // facade. Walk static imports so entry CSS is collected wherever Rollup parked it.
             const css = collectEntryCss(chunk, bundle);
             for (const name of css) entryCss.add(name);
+            // Vite drops a style entry's empty JS chunk from the bundle *after* this hook, so advertising it
+            // would render a `<script>` for a file that was never written (and break SRI, which hashes off disk).
+            const styleEntry = isStylesheet(chunk.facadeModuleId);
             entryPoints[chunk.name] = {
-                js: [chunk.fileName],
+                js: styleEntry ? [] : [chunk.fileName],
                 css,
                 preload: emittedChunks(chunk.imports, bundle),
                 dynamic: emittedChunks(chunk.dynamicImports, bundle),
             };
-            assets.push({ logicalName: `${chunk.name}.js`, fileName: chunk.fileName });
+            if (!styleEntry) assets.push({ logicalName: `${chunk.name}.js`, fileName: chunk.fileName });
         } else if (chunk.viteMetadata) {
             for (const name of chunk.viteMetadata.importedCss) asyncCss.add(name);
         }
@@ -86,8 +89,6 @@ function assetLogicalName(file: Rollup.OutputAsset, root: string, entryCss: Set<
     return file.names[0] ?? file.fileName;
 }
 
-const CSS_EXTS = new Set(['.css', '.scss', '.sass', '.less', '.styl', '.stylus', '.postcss', '.pcss']);
-
 export interface DevConfig {
     root: string;
     input?: Rollup.InputOption;
@@ -107,7 +108,7 @@ export function configToDevGraph(config: DevConfig): NormalizedGraph {
 
     for (const [name, inputPath] of Object.entries(entries)) {
         const rel = slash(relative(config.root, resolve(config.root, inputPath)));
-        const type: 'js' | 'css' = CSS_EXTS.has(extname(inputPath)) ? 'css' : 'js';
+        const type: 'js' | 'css' = isStylesheet(inputPath) ? 'css' : 'js';
         const files: EntryFiles = { js: [], css: [], preload: [], dynamic: [] };
         files[type] = [rel];
         entryPoints[name] = files;

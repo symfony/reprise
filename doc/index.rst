@@ -14,6 +14,7 @@ Vite and Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**, **JSX/Vue
 reimplement any of that. It covers only the Symfony-side glue the bundlers leave out:
 
 - **Multiple entries**: build several independent entry points from one config
+- **Style entries**: point an entry straight at a ``.scss``/``.css`` file and get CSS only, no stray ``<script>``
 - ``entrypoints.json``: generated in both build and dev-server modes
 - ``manifest.json``: maps each logical filename to its hashed URL
 - **Asset versioning**: content-hash cache busting, wired into the manifest
@@ -279,6 +280,48 @@ Map, for instance, ships a CSS file meant for Webpack's loader and needs an alia
     })
 
 Check each package's own docs for this kind of tweak.
+
+Style entries
+~~~~~~~~~~~~~
+
+An entry can point straight at a stylesheet, the way Encore's ``addStyleEntry()`` did. It compiles to CSS and
+nothing else: ``reprise_entry_link_tags('theme')`` renders the ``<link>``, while ``reprise_entry_script_tags('theme')``
+has nothing to render (in dev it still emits the shared HMR client, once per page).
+
+.. code-block:: javascript
+
+    // vite.config.ts
+    export default defineConfig({
+      input: {
+        app: './assets/app.js',
+        theme: './assets/styles/theme.scss',
+      },
+      plugins: [
+        Symfony(),
+      ],
+    })
+
+.. code-block:: javascript
+
+    // rsbuild.config.ts
+    export default defineConfig({
+      source: {
+        entry: {
+          app: './assets/app.js',
+          theme: './assets/styles/theme.scss',
+        },
+      },
+      plugins: [
+        pluginSass(),
+        Symfony(),
+      ],
+    })
+
+Reprise treats an entry as a style entry when its source file carries a stylesheet extension: ``.css``, ``.scss``,
+``.sass``, ``.less``, ``.styl``, ``.stylus``, ``.postcss`` or ``.pcss``. Both bundlers still produce a JavaScript file
+for it internally, but neither keeps it: Vite prunes it before writing the build, and Reprise deletes Rspack's from
+the compilation. Either way, it stays out of ``entrypoints.json`` and ``manifest.json``: no empty ``<script>`` tag
+ever reaches the page.
 
 File copy
 ~~~~~~~~~
@@ -723,7 +766,7 @@ Webpack Encore                                                                  
 ``enableSingleRuntimeChunk()`` / ``disableSingleRuntimeChunk()``                     native runtime chunk management
 ``enableSourceMaps()``                                                               native (Vite ``build.sourcemap``)
 ``configureImageRule()`` / ``configureFontRule()`` / ``configureFilenames()``        native asset handling and output naming
-``addStyleEntry()``                                                                  add the stylesheet as an entry input, or import it from a JS entry
+``addStyleEntry()``                                                                  add the stylesheet as an entry input (see `Style entries`_), or import it from a JS entry
 ``configureDefinePlugin()``                                                          Vite ``define``, Rsbuild ``source.define``
 ``disableCssExtraction()`` / ``configureCssLoader()`` / ``configureStyleLoader()``   native CSS handling (extraction, minification)
 ``addAliases()``                                                                     ``resolve.alias``
