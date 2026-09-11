@@ -47,6 +47,49 @@ describe('bundleToGraph', () => {
         expect(graph.entryPoints.vendor).toBeUndefined();
     });
 
+    it('advertises no js for a style entry (Vite prunes its empty chunk)', () => {
+        const bundle = {
+            'theme-a1b2.js': {
+                ...chunk({
+                    fileName: 'theme-a1b2.js',
+                    name: 'theme',
+                    isEntry: true,
+                    code: '',
+                    facadeModuleId: '/app/assets/styles/theme.scss',
+                }),
+                viteMetadata: { importedCss: new Set(['theme-c3.css']), importedAssets: new Set() },
+            },
+            'theme-c3.css': asset('theme-c3.css', ['theme.css']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.entryPoints.theme).toEqual({ js: [], css: ['theme-c3.css'], preload: [], dynamic: [] });
+        expect(graph.assets).toEqual([{ logicalName: 'theme.css', fileName: 'theme-c3.css' }]);
+    });
+
+    it('keeps the js of an entry that merely imports CSS', () => {
+        // Vite only prunes a *stylesheet-sourced* entry; a .js entry importing nothing but CSS is still written.
+        const bundle = {
+            'app-a1b2.js': {
+                ...chunk({
+                    fileName: 'app-a1b2.js',
+                    name: 'app',
+                    isEntry: true,
+                    code: '',
+                    facadeModuleId: '/app/assets/app.js',
+                }),
+                viteMetadata: { importedCss: new Set(['app-c3.css']), importedAssets: new Set() },
+            },
+            'app-c3.css': asset('app-c3.css', ['app.css']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.entryPoints.app).toEqual({ js: ['app-a1b2.js'], css: ['app-c3.css'], preload: [], dynamic: [] });
+        expect(graph.assets).toContainEqual({ logicalName: 'app.js', fileName: 'app-a1b2.js' });
+    });
+
     it('drops a CSS-only dynamic import whose chunk was pruned to empty JS', () => {
         // `import('x.css')` yields a chunk rolldown-vite empties (code === '') and never writes; its name
         // still shows in dynamicImports. It must be dropped, and its async CSS kept out of the manifest.

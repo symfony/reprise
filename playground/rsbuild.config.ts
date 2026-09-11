@@ -16,6 +16,8 @@ export default defineConfig({
     entry: {
       app: resolve(__dirname, './assets/app.ts'),
       admin: resolve(__dirname, './assets/admin.ts'),
+      // A style entry: a stylesheet as the entry input, so it builds to CSS with no JS attached.
+      theme: resolve(__dirname, './assets/styles/theme.scss'),
     },
   },
   plugins: [

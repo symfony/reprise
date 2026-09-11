@@ -1,12 +1,12 @@
 import type { UnpluginFactory, UnpluginInstance } from 'unplugin';
-import type { RspackStats } from './collectors/rspack';
+import type { RspackEntry, RspackStats } from './collectors/rspack';
 import type { CopyResult } from './core/copy';
 import type { BuildContext, ManifestJson, NormalizedGraph, Options } from './types';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as process from 'node:process';
 import { createUnplugin } from 'unplugin';
-import { statsToGraph } from './collectors/rspack';
+import { statsToGraph, styleEntryNames } from './collectors/rspack';
 import { bundleToGraph, configToDevGraph } from './collectors/vite';
 import { copyManifest, resolveCopyFiles, writeCopyFiles } from './core/copy';
 import { resolveDevOrigin } from './core/dev-server';
@@ -259,6 +259,29 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                                     }
                                 );
                             });
+                            // Rspack emits a runtime-only JS file for a style entry; delete it so the build
+                            // matches Vite, which prunes its equivalent. Dev keeps it: nothing reaches the disk
+                            // there, and the file carries the entry's HMR runtime.
+                            const styleEntries = styleEntryNames(c.options.entry as RspackEntry);
+                            c.hooks.thisCompilation.tap('@symfony/reprise:style-entries', (compilation) => {
+                                compilation.hooks.processAssets.tap(
+                                    {
+                                        name: '@symfony/reprise:style-entries',
+                                        stage: c.rspack.Compilation.PROCESS_ASSETS_STAGE_REPORT,
+                                    },
+                                    () => {
+                                        for (const chunk of compilation.chunks) {
+                                            if (!chunk.name || !styleEntries.has(chunk.name)) continue;
+                                            for (const file of chunk.files) {
+                                                if (file.endsWith('.js')) compilation.deleteAsset(file);
+                                            }
+                                            for (const file of chunk.auxiliaryFiles) {
+                                                if (file.endsWith('.js.map')) compilation.deleteAsset(file);
+                                            }
+                                        }
+                                    }
+                                );
+                            });
                         }
 
                         c.hooks.done.tap('@symfony/reprise', (stats) => {
@@ -284,7 +307,10 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
                                 manifestKeyPrefix: resolved.manifestKeyPrefix,
                             };
                             const graph = statsToGraph(
-                                stats.toJson({ assets: true, entrypoints: true }) as RspackStats
+                                stats.toJson({ assets: true, entrypoints: true }) as RspackStats,
+                                // The normalized entry rather than `source.entry`: Rsbuild resolves and reshapes
+                                // entries on the way to Rspack, and this is the form the stats keys match.
+                                c.options.entry as RspackEntry
                             );
                             // SRI (build only): `done` fires after emit, so hash files off disk. Dev has no stable hashes.
                             if (!isDev && resolved.integrity) {

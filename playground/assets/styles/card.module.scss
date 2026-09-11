@@ -1,0 +1,16 @@
+// A CSS Module: `badge` is hashed at build time, so no template can name it. `card_module_controller.js`
+// imports the mapping and applies `styles.badge` at runtime.
+$accent: #0f766e;
+
+.badge {
+    display: inline-block;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-weight: 600;
+    color: #fff;
+    background: $accent;
+
+    &::before {
+        content: '● ';
+    }
+}

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.1.3
+
+- Properly support CSS entries: an entry pointing straight at a stylesheet builds to CSS only, with no `<script>` tag and no JavaScript file listed in `entrypoints.json` or `manifest.json`
+
 ## 1.1.0
 
 - Add support for the top-level `input` option in dev mode, added in Vite 8.2
