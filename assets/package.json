@@ -89,7 +89,7 @@
     "@rsbuild/core": "^2.2.3",
     "@rspack/core": "~2.1.10",
     "@tsconfig/node22": "^22.0.6",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.5.1",
     "@vitejs/plugin-react": "^6.1.1",
     "jsdom": "^30.0.1",
     "nodemon": "^3.1.14",
