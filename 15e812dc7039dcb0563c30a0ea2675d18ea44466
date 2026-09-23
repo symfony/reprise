@@ -1,0 +1,11 @@
+---------------------------------------------------------------------------
+
+by smnandre at 2026-09-15T14:22:32Z
+
+It seems we're gonna use another path (like what you suggest indeed, var/something)
+
+---------------------------------------------------------------------------
+
+by IndraGunawan at 2026-09-21T06:06:46Z
+
+`outputPath` option is already there https://github.com/symfony/reprise/blob/0fa0f83/src/RepriseBundle.php#L40-L42 and it serves the same purpose
