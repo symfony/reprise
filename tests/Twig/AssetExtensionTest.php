@@ -29,7 +29,7 @@ final class AssetExtensionTest extends TestCase
 {
     use BuildCollectionTrait;
 
-    public function testFunctionsRenderThroughALazilyBuiltRuntime()
+    public function testFunctionsRenderThroughALazilyBuiltRuntime(): void
     {
         $built = 0;
         $twig = new Environment(new ArrayLoader([
@@ -57,7 +57,7 @@ final class AssetExtensionTest extends TestCase
         $this->assertSame('<script src="/build/app.js" type="module"></script>', $html);
     }
 
-    public function testAllFourFunctionsDelegateThroughTheRuntime()
+    public function testAllFourFunctionsDelegateThroughTheRuntime(): void
     {
         $twig = new Environment(new ArrayLoader([
             'page' => "{{ reprise_entry_script_tags('app') }}|{{ reprise_entry_link_tags('app') }}"
@@ -76,7 +76,7 @@ final class AssetExtensionTest extends TestCase
         );
     }
 
-    public function testScriptTagsAcceptPerCallAttributesViaNamedArgument()
+    public function testScriptTagsAcceptPerCallAttributesViaNamedArgument(): void
     {
         $twig = new Environment(new ArrayLoader([
             'page' => "{{ reprise_entry_script_tags('app', attributes={'defer': true, 'data-turbo-track': 'reload'}) }}",
@@ -92,7 +92,7 @@ final class AssetExtensionTest extends TestCase
         );
     }
 
-    public function testEntryExistsFunctionReflectsTheLookup()
+    public function testEntryExistsFunctionReflectsTheLookup(): void
     {
         $collection = $this->collection(['_default' => new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json')]);
         $twig = new Environment(new ArrayLoader([

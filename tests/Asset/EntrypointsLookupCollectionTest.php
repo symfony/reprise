@@ -24,7 +24,7 @@ final class EntrypointsLookupCollectionTest extends TestCase
         return new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json');
     }
 
-    public function testResolvesTheDefaultBuildWhenNoNameIsGiven()
+    public function testResolvesTheDefaultBuildWhenNoNameIsGiven(): void
     {
         $default = $this->lookup();
         $collection = new EntrypointsLookupCollection(
@@ -36,7 +36,7 @@ final class EntrypointsLookupCollectionTest extends TestCase
         $this->assertSame($default, $collection->getEntrypointsLookup('_default'));
     }
 
-    public function testResolvesANamedBuild()
+    public function testResolvesANamedBuild(): void
     {
         $admin = $this->lookup();
         $collection = new EntrypointsLookupCollection(
@@ -47,7 +47,7 @@ final class EntrypointsLookupCollectionTest extends TestCase
         $this->assertSame($admin, $collection->getEntrypointsLookup('admin'));
     }
 
-    public function testThrowsForAnUnknownBuild()
+    public function testThrowsForAnUnknownBuild(): void
     {
         $collection = new EntrypointsLookupCollection(
             new ServiceLocator(['_default' => fn () => $this->lookup()]),
@@ -58,7 +58,7 @@ final class EntrypointsLookupCollectionTest extends TestCase
         $collection->getEntrypointsLookup('does-not-exist');
     }
 
-    public function testThrowsWhenNoBuildIsGivenAndThereIsNoDefault()
+    public function testThrowsWhenNoBuildIsGivenAndThereIsNoDefault(): void
     {
         $collection = new EntrypointsLookupCollection(
             new ServiceLocator(['admin' => fn () => $this->lookup()]),

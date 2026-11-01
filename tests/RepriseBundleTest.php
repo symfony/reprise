@@ -33,14 +33,14 @@ final class RepriseBundleTest extends TestCase
     }
 
     #[DataProvider('provideKernels')]
-    public function testBundleBootsInAKernel(Kernel $kernel)
+    public function testBundleBootsInAKernel(Kernel $kernel): void
     {
         $kernel->boot();
 
         $this->assertArrayHasKey('RepriseBundle', $kernel->getBundles());
     }
 
-    public function testTwigFunctionsRenderThroughALazilyBuiltTagRenderer()
+    public function testTwigFunctionsRenderThroughALazilyBuiltTagRenderer(): void
     {
         $kernel = new FunctionalAppKernel(__DIR__.'/fixtures/build');
         $kernel->boot();
@@ -64,7 +64,7 @@ final class RepriseBundleTest extends TestCase
         )->render());
     }
 
-    public function testRejectsAnInvalidCrossoriginValue()
+    public function testRejectsAnInvalidCrossoriginValue(): void
     {
         // crossorigin is an enum: any value other than false/anonymous/use-credentials is a config
         // error surfaced at container-compile time, not silently rendered onto the tags.
@@ -73,7 +73,7 @@ final class RepriseBundleTest extends TestCase
         new FunctionalAppKernel(__DIR__.'/fixtures/build', ['crossorigin' => 'not-valid'])->boot();
     }
 
-    public function testRejectsTheReservedDefaultBuildName()
+    public function testRejectsTheReservedDefaultBuildName(): void
     {
         // "_default" is reserved for the output_path build, so it cannot be used as a named build.
         $this->expectException(InvalidConfigurationException::class);
@@ -81,7 +81,7 @@ final class RepriseBundleTest extends TestCase
         new FunctionalAppKernel(__DIR__.'/fixtures/build', ['builds' => ['_default' => __DIR__.'/fixtures/build']])->boot();
     }
 
-    public function testRequiresAtLeastOneBuild()
+    public function testRequiresAtLeastOneBuild(): void
     {
         // output_path: false with no named builds leaves nothing to look up.
         $this->expectException(\LogicException::class);

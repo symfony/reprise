@@ -32,7 +32,7 @@ final class DevAssetTagsTest extends TestCase
         return $this->container($fixture)->get('reprise.tag_renderer');
     }
 
-    public function testViteDevInjectsTheHmrClientAndServesFromTheOrigin()
+    public function testViteDevInjectsTheHmrClientAndServesFromTheOrigin(): void
     {
         // Vite dev emits the HMR client URL (served under `base`, so `/build/@vite/client`); it is
         // injected once, before the entry script, whose src is the dev-server origin URL passed
@@ -44,7 +44,7 @@ final class DevAssetTagsTest extends TestCase
         $this->assertSame($expected, $this->renderer('dev')->renderScriptTags('app'));
     }
 
-    public function testRsbuildDevServesFromTheOriginWithNoClientInjection()
+    public function testRsbuildDevServesFromTheOriginWithNoClientInjection(): void
     {
         // Rsbuild dev emits `client: null` (its HMR client is compiled into the bundle), so nothing
         // is injected; the entry script still loads from the dev-server origin.
@@ -55,7 +55,7 @@ final class DevAssetTagsTest extends TestCase
         $this->assertSame($expected, $this->renderer('dev-rspack')->renderScriptTags('app'));
     }
 
-    public function testARenderAssetTagListenerCanNonceTheInjectedClientAndScripts()
+    public function testARenderAssetTagListenerCanNonceTheInjectedClientAndScripts(): void
     {
         $container = $this->container('dev');
 

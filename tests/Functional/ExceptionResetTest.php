@@ -21,7 +21,7 @@ use Symfony\Reprise\Tests\Kernel\FunctionalAppKernel;
 
 final class ExceptionResetTest extends TestCase
 {
-    public function testTheErrorPageGetsTheFullTagsAfterAPartialRenderThrows()
+    public function testTheErrorPageGetsTheFullTagsAfterAPartialRenderThrows(): void
     {
         $kernel = new FunctionalAppKernel(__DIR__.'/../fixtures/build');
         $kernel->boot();

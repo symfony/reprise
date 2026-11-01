@@ -17,7 +17,7 @@ use Symfony\Reprise\Tests\Kernel\FunctionalAppKernel;
 
 final class EntrypointsCacheTest extends TestCase
 {
-    public function testCacheEnabledWiresThePoolAndResolvesAnEntry()
+    public function testCacheEnabledWiresThePoolAndResolvesAnEntry(): void
     {
         $kernel = new FunctionalAppKernel(__DIR__.'/../fixtures/build', ['cache' => true]);
         $kernel->boot();
