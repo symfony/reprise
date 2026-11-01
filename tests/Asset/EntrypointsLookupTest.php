@@ -26,7 +26,7 @@ final class EntrypointsLookupTest extends TestCase
         return new EntrypointsLookup(__DIR__.'/../fixtures/'.$file, $strictMode);
     }
 
-    public function testResolvesAnEntrysFilesByType()
+    public function testResolvesAnEntrysFilesByType(): void
     {
         $lookup = $this->lookup();
 
@@ -36,7 +36,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertSame(['build/lazy-x.js'], $lookup->getDynamicFiles('app'));
     }
 
-    public function testDeduplicatesSharedFilesAcrossCalls()
+    public function testDeduplicatesSharedFilesAcrossCalls(): void
     {
         $lookup = $this->lookup();
 
@@ -47,7 +47,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertSame(['build/admin-99.js'], $lookup->getJavaScriptFiles('admin'));
     }
 
-    public function testResetClearsDeduplicationState()
+    public function testResetClearsDeduplicationState(): void
     {
         $lookup = $this->lookup();
 
@@ -57,7 +57,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
     }
 
-    public function testEntryExists()
+    public function testEntryExists(): void
     {
         $lookup = $this->lookup();
 
@@ -65,7 +65,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertFalse($lookup->entryExists('nope'));
     }
 
-    public function testExposesModeAndIntegrity()
+    public function testExposesModeAndIntegrity(): void
     {
         $lookup = $this->lookup();
 
@@ -74,7 +74,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertSame('sha384-app', $lookup->getIntegrityData()['build/app-a1b2.js']);
     }
 
-    public function testExposesTheDevServerAndDevModeForAServeFlavouredFile()
+    public function testExposesTheDevServerAndDevModeForAServeFlavouredFile(): void
     {
         $lookup = $this->lookup(file: 'dev/entrypoints.json');
 
@@ -88,33 +88,33 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertSame('http://127.0.0.1:5173/build/@vite/client', $devServer->client);
     }
 
-    public function testThrowsWhenTheFileIsNotAJsonObject()
+    public function testThrowsWhenTheFileIsNotAJsonObject(): void
     {
         $this->expectException(InvalidEntrypointsException::class);
 
         $this->lookup(file: 'malformed/entrypoints.json')->getJavaScriptFiles('app');
     }
 
-    public function testStrictModeThrowsOnUnknownEntry()
+    public function testStrictModeThrowsOnUnknownEntry(): void
     {
         $this->expectException(EntrypointNotFoundException::class);
 
         $this->lookup()->getJavaScriptFiles('nope');
     }
 
-    public function testNonStrictModeReturnsEmptyForUnknownEntry()
+    public function testNonStrictModeReturnsEmptyForUnknownEntry(): void
     {
         $this->assertSame([], $this->lookup(strictMode: false)->getJavaScriptFiles('nope'));
     }
 
-    public function testStrictModeThrowsOnMissingFile()
+    public function testStrictModeThrowsOnMissingFile(): void
     {
         $this->expectException(EntrypointsFileNotFoundException::class);
 
         $this->lookup(file: 'does-not-exist/entrypoints.json')->getJavaScriptFiles('app');
     }
 
-    public function testNonStrictModeIsQuietOnMissingFile()
+    public function testNonStrictModeIsQuietOnMissingFile(): void
     {
         $lookup = $this->lookup(strictMode: false, file: 'does-not-exist/entrypoints.json');
 
@@ -122,7 +122,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertFalse($lookup->entryExists('app'));
     }
 
-    public function testACacheHitResolvesWithoutTouchingTheFile()
+    public function testACacheHitResolvesWithoutTouchingTheFile(): void
     {
         $cache = new ArrayAdapter();
         $entrypoints = Entrypoints::fromArray([
@@ -141,7 +141,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertSame(['build/app.js'], $lookup->getJavaScriptFiles('app'));
     }
 
-    public function testACacheMissReadsTheFileAndPopulatesThePool()
+    public function testACacheMissReadsTheFileAndPopulatesThePool(): void
     {
         $cache = new ArrayAdapter();
         $lookup = new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json', true, $cache, 'reprise.entrypoints');
@@ -153,7 +153,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertInstanceOf(Entrypoints::class, $item->get());
     }
 
-    public function testAMissingFileIsNotCached()
+    public function testAMissingFileIsNotCached(): void
     {
         $cache = new ArrayAdapter();
 
@@ -161,7 +161,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertFalse($cache->getItem('reprise.entrypoints')->isHit());
     }
 
-    public function testACachedNullIsIgnoredAndTheFileRead()
+    public function testACachedNullIsIgnoredAndTheFileRead(): void
     {
         $cache = new ArrayAdapter();
         $cache->save($cache->getItem('reprise.entrypoints')->set(null));
@@ -171,7 +171,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertSame(['build/app-a1b2.js'], $lookup->getJavaScriptFiles('app'));
     }
 
-    public function testResetForgetsAMissingFileSoALaterBuildIsPickedUp()
+    public function testResetForgetsAMissingFileSoALaterBuildIsPickedUp(): void
     {
         $path = sys_get_temp_dir().'/reprise_entrypoints_'.uniqid('', true).'.json';
         $lookup = new EntrypointsLookup($path, false);

@@ -18,7 +18,7 @@ use Symfony\Reprise\Tests\Kernel\LookupConsumer;
 
 final class EntrypointsLookupTest extends TestCase
 {
-    public function testTheLookupIsWiredFromConfigAndResolvesAnEntry()
+    public function testTheLookupIsWiredFromConfigAndResolvesAnEntry(): void
     {
         $kernel = new FunctionalAppKernel(__DIR__.'/../fixtures/build');
         $kernel->boot();
@@ -30,7 +30,7 @@ final class EntrypointsLookupTest extends TestCase
         $this->assertTrue($lookup->isProd());
     }
 
-    public function testTheInterfaceIsAutowirableIntoUserServices()
+    public function testTheInterfaceIsAutowirableIntoUserServices(): void
     {
         $kernel = new FunctionalAppKernel(__DIR__.'/../fixtures/build');
         $kernel->boot();

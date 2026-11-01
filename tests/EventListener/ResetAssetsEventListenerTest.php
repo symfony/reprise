@@ -54,7 +54,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         return new ExceptionEvent($this->createStub(HttpKernelInterface::class), Request::create('/'), $requestType, new \RuntimeException('boom'));
     }
 
-    public function testResetsDeduplicationWhenTheMainRequestFinishes()
+    public function testResetsDeduplicationWhenTheMainRequestFinishes(): void
     {
         $lookup = $this->lookup();
         $lookup->getPreloadFiles('app'); // marks the shared chunk as already returned
@@ -65,7 +65,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
     }
 
-    public function testIgnoresSubRequestsOnFinishRequest()
+    public function testIgnoresSubRequestsOnFinishRequest(): void
     {
         $lookup = $this->lookup();
         $lookup->getPreloadFiles('app');
@@ -76,7 +76,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $this->assertSame([], $lookup->getPreloadFiles('admin'));
     }
 
-    public function testResetsDeduplicationWhenAnExceptionIsHandled()
+    public function testResetsDeduplicationWhenAnExceptionIsHandled(): void
     {
         $lookup = $this->lookup();
         $lookup->getPreloadFiles('app');
@@ -86,7 +86,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
     }
 
-    public function testResetsDeduplicationEvenForSubRequestExceptions()
+    public function testResetsDeduplicationEvenForSubRequestExceptions(): void
     {
         // An exception at any level abandons the render, so even a sub-request one resets (unlike FINISH_REQUEST).
         $lookup = $this->lookup();
@@ -97,7 +97,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $this->assertSame(['build/shared-e5f6.js'], $lookup->getPreloadFiles('admin'));
     }
 
-    public function testResetsTheRendererWhenAnExceptionIsHandled()
+    public function testResetsTheRendererWhenAnExceptionIsHandled(): void
     {
         $lookup = $this->lookup('dev');
         $renderer = $this->rendererFor($lookup);
@@ -109,7 +109,7 @@ final class ResetAssetsEventListenerTest extends TestCase
         $this->assertStringContainsString('@vite/client', $renderer->renderScriptTags('app'));
     }
 
-    public function testResetsBeforeTheErrorPageIsRendered()
+    public function testResetsBeforeTheErrorPageIsRendered(): void
     {
         $lookup = $this->lookup();
         $renderer = $this->rendererFor($lookup);

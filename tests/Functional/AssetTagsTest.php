@@ -26,7 +26,7 @@ final class AssetTagsTest extends TestCase
         return $kernel->getContainer()->get('reprise.tag_renderer');
     }
 
-    public function testScriptTagsRenderTheEntryWithResolvedUrlAndIntegrity()
+    public function testScriptTagsRenderTheEntryWithResolvedUrlAndIntegrity(): void
     {
         // `app.js` is a relative entrypoints reference (`build/app-a1b2.js`) resolved through the
         // framework asset package (version-less) to an absolute path, and it carries an SRI hash in
@@ -38,7 +38,7 @@ final class AssetTagsTest extends TestCase
         $this->assertSame($expected, $this->renderer()->renderScriptTags('app'));
     }
 
-    public function testLinkTagsRenderTheEntryStylesheet()
+    public function testLinkTagsRenderTheEntryStylesheet(): void
     {
         // `app.css` (`build/app-c3d4.css`) has no SRI hash in the fixture, so no integrity/crossorigin.
         $expected = <<<'HTML'
@@ -48,7 +48,7 @@ final class AssetTagsTest extends TestCase
         $this->assertSame($expected, $this->renderer()->renderLinkTags('app'));
     }
 
-    public function testStrictModeThrowsWhenRenderingAnUnknownEntry()
+    public function testStrictModeThrowsWhenRenderingAnUnknownEntry(): void
     {
         // strict_mode defaults to true, so a missing entry surfaces as a clear exception end-to-end
         // (through the booted kernel and the real EntrypointsLookup), rather than silent empty output.

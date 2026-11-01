@@ -31,7 +31,7 @@ final class MultipleBuildsTest extends TestCase
         return $kernel->getContainer()->get('reprise.tag_renderer');
     }
 
-    public function testEachBuildRendersFromItsOwnEntrypointsAndDevServer()
+    public function testEachBuildRendersFromItsOwnEntrypointsAndDevServer(): void
     {
         $renderer = $this->renderer();
 
@@ -49,7 +49,7 @@ final class MultipleBuildsTest extends TestCase
         );
     }
 
-    public function testEntryExistsIsResolvedPerBuild()
+    public function testEntryExistsIsResolvedPerBuild(): void
     {
         $renderer = $this->renderer();
 
@@ -57,7 +57,7 @@ final class MultipleBuildsTest extends TestCase
         $this->assertTrue($renderer->entryExists('app', build: 'widget'));
     }
 
-    public function testRenderingAnUnconfiguredBuildThrows()
+    public function testRenderingAnUnconfiguredBuildThrows(): void
     {
         $this->expectException(UndefinedBuildException::class);
 

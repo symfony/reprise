@@ -32,7 +32,7 @@ final class EntrypointsCacheWarmerTest extends TestCase
         @unlink($this->file);
     }
 
-    public function testWarmsThePoolFromTheEntrypointsFile()
+    public function testWarmsThePoolFromTheEntrypointsFile(): void
     {
         $warmer = new EntrypointsCacheWarmer(
             ['_default' => __DIR__.'/../fixtures/build/entrypoints.json'],
@@ -49,7 +49,7 @@ final class EntrypointsCacheWarmerTest extends TestCase
         $this->assertSame(['build/app-a1b2.js'], $item->get()->entryPoints['app']->js);
     }
 
-    public function testWarmsEveryBuildUnderItsOwnKey()
+    public function testWarmsEveryBuildUnderItsOwnKey(): void
     {
         $warmer = new EntrypointsCacheWarmer(
             [
@@ -65,7 +65,7 @@ final class EntrypointsCacheWarmerTest extends TestCase
         $this->assertTrue($cache->getItem('reprise.entrypoints.admin')->isHit());
     }
 
-    public function testSkipsAMissingFileWithoutThrowing()
+    public function testSkipsAMissingFileWithoutThrowing(): void
     {
         $cache = new PhpArrayAdapter($this->file, new ArrayAdapter());
         $warmer = new EntrypointsCacheWarmer(['_default' => '/does/not/exist/entrypoints.json'], $cache);
@@ -74,7 +74,7 @@ final class EntrypointsCacheWarmerTest extends TestCase
         $this->assertFalse($cache->getItem('reprise.entrypoints._default')->isHit());
     }
 
-    public function testTheFullEntrypointsGraphSurvivesTheCompiledFileRoundTrip()
+    public function testTheFullEntrypointsGraphSurvivesTheCompiledFileRoundTrip(): void
     {
         // A maximally-populated graph: prod flag, a non-null DevServer DTO, publicPath, several
         // entries exercising all four file lists, and an integrity map. If VarExporter dropped or

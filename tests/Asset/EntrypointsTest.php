@@ -18,7 +18,7 @@ use Symfony\Reprise\Exception\InvalidEntrypointsException;
 
 final class EntrypointsTest extends TestCase
 {
-    public function testFromArrayParsesEveryField()
+    public function testFromArrayParsesEveryField(): void
     {
         $entrypoints = Entrypoints::fromArray([
             'isProd' => true,
@@ -47,7 +47,7 @@ final class EntrypointsTest extends TestCase
         $this->assertSame(['/build/lazy.js'], $app->dynamic);
     }
 
-    public function testFromArrayParsesTheDevServer()
+    public function testFromArrayParsesTheDevServer(): void
     {
         $devServer = Entrypoints::fromArray([
             'isProd' => false,
@@ -62,7 +62,7 @@ final class EntrypointsTest extends TestCase
         $this->assertSame('http://localhost:5173/build/@vite/client', $devServer->client);
     }
 
-    public function testFromArrayDefaultsMissingOptionalSections()
+    public function testFromArrayDefaultsMissingOptionalSections(): void
     {
         // A dev-flavoured file may omit `integrity`; entries may omit css/preload/dynamic.
         $entrypoints = Entrypoints::fromArray([
@@ -84,7 +84,7 @@ final class EntrypointsTest extends TestCase
      * @param array<string, mixed> $data
      */
     #[DataProvider('provideMalformedData')]
-    public function testFromArrayRejectsMalformedData(array $data)
+    public function testFromArrayRejectsMalformedData(array $data): void
     {
         $this->expectException(InvalidEntrypointsException::class);
 

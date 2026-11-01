@@ -21,7 +21,7 @@ final class ManifestAssetVersioningTest extends TestCase
      * Not mirrored per bundler on purpose: the manifest.json shape is identical for Vite and
      * Rsbuild, and consuming it is pure PHP with no bundler branch, so one test covers both.
      */
-    public function testManifestResolvesLooseAssetsAndPassesEntryReferencesThrough()
+    public function testManifestResolvesLooseAssetsAndPassesEntryReferencesThrough(): void
     {
         $buildDir = __DIR__.'/../fixtures/build';
         $kernel = new FunctionalAppKernel(

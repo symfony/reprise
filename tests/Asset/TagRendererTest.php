@@ -126,19 +126,19 @@ final class TagRendererTest extends TestCase
         };
     }
 
-    public function testRendersModuleScriptTagsWithPackagesResolvedSrc()
+    public function testRendersModuleScriptTagsWithPackagesResolvedSrc(): void
     {
         $html = $this->renderer(js: ['build/app-a1b2.js'])->renderScriptTags('app');
         $this->assertSame('<script src="/build/app-a1b2.js" type="module"></script>', $html);
     }
 
-    public function testRendersStylesheetLinkTags()
+    public function testRendersStylesheetLinkTags(): void
     {
         $html = $this->renderer(css: ['build/app-c3.css'])->renderLinkTags('app');
         $this->assertSame('<link rel="stylesheet" href="/build/app-c3.css">', $html);
     }
 
-    public function testAddsIntegrityAndCrossoriginWhenPresent()
+    public function testAddsIntegrityAndCrossoriginWhenPresent(): void
     {
         $html = $this->renderer(
             js: ['build/app-a1b2.js'],
@@ -148,25 +148,25 @@ final class TagRendererTest extends TestCase
         $this->assertStringContainsString('crossorigin="anonymous"', $html);
     }
 
-    public function testNoCrossoriginWithoutIntegrity()
+    public function testNoCrossoriginWithoutIntegrity(): void
     {
         $html = $this->renderer(js: ['build/app-a1b2.js'])->renderScriptTags('app');
         $this->assertStringNotContainsString('crossorigin', $html);
     }
 
-    public function testGetJsFilesReturnsResolvedUrlsWithoutTags()
+    public function testGetJsFilesReturnsResolvedUrlsWithoutTags(): void
     {
         $urls = $this->renderer(js: ['build/app-a1b2.js', 'build/vendor-e5.js'])->getJsFiles('app');
         $this->assertSame(['/build/app-a1b2.js', '/build/vendor-e5.js'], $urls);
     }
 
-    public function testScriptAndLinkDefaultAttributesAreApplied()
+    public function testScriptAndLinkDefaultAttributesAreApplied(): void
     {
         $html = $this->renderer(js: ['build/app.js'], scriptAttributes: ['defer' => true])->renderScriptTags('app');
         $this->assertStringContainsString(' defer', $html);
     }
 
-    public function testInjectsViteHmrClientOncePerRequestInDev()
+    public function testInjectsViteHmrClientOncePerRequestInDev(): void
     {
         $renderer = $this->renderer(
             js: ['http://127.0.0.1:5173/build/app.js'],
@@ -189,7 +189,7 @@ final class TagRendererTest extends TestCase
         $this->assertStringContainsString('@vite/client', $renderer->renderScriptTags('app'));
     }
 
-    public function testDoesNotInjectHmrClientWhenDevServerClientIsNull()
+    public function testDoesNotInjectHmrClientWhenDevServerClientIsNull(): void
     {
         $html = $this->renderer(
             js: ['http://127.0.0.1:5173/build/app.js'],
@@ -199,14 +199,14 @@ final class TagRendererTest extends TestCase
         $this->assertStringNotContainsString('@vite/client', $html);
     }
 
-    public function testDoesNotInjectHmrClientInProd()
+    public function testDoesNotInjectHmrClientInProd(): void
     {
         $html = $this->renderer(js: ['build/app-a1b2.js'])->renderScriptTags('app');
 
         $this->assertStringNotContainsString('@vite/client', $html);
     }
 
-    public function testInjectsReactRefreshPreambleAfterTheClientAndBeforeTheEntryInDev()
+    public function testInjectsReactRefreshPreambleAfterTheClientAndBeforeTheEntryInDev(): void
     {
         $renderer = $this->renderer(
             js: ['http://127.0.0.1:5173/build/app.js'],
@@ -243,7 +243,7 @@ final class TagRendererTest extends TestCase
         $this->assertLessThan($entryPos, $preamblePos);
     }
 
-    public function testDoesNotInjectReactRefreshPreambleWhenNotAReactApp()
+    public function testDoesNotInjectReactRefreshPreambleWhenNotAReactApp(): void
     {
         $html = $this->renderer(
             js: ['http://127.0.0.1:5173/build/app.js'],
@@ -254,7 +254,7 @@ final class TagRendererTest extends TestCase
         $this->assertStringNotContainsString('__vite_plugin_react_preamble_installed__', $html);
     }
 
-    public function testRendersModulepreloadLinksWithIntegrityBeforeScripts()
+    public function testRendersModulepreloadLinksWithIntegrityBeforeScripts(): void
     {
         $html = $this->renderer(
             js: ['build/app-a1b2.js'],
@@ -269,7 +269,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testRegistersPreloadLinksOnTheRequestWhenWebLinkIsAvailable()
+    public function testRegistersPreloadLinksOnTheRequestWhenWebLinkIsAvailable(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -300,7 +300,7 @@ final class TagRendererTest extends TestCase
         $this->assertSame('style', $byHref['/build/app-c3.css']['as']);
     }
 
-    public function testPreloadLinksCarryIntegrityAndCrossoriginWhenPresent()
+    public function testPreloadLinksCarryIntegrityAndCrossoriginWhenPresent(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -332,7 +332,7 @@ final class TagRendererTest extends TestCase
         $this->assertSame('anonymous', $byHref['/build/app-c3.css']['crossorigin']);
     }
 
-    public function testPreloadLinksHaveNoIntegrityWhenTheAssetIsNotHashed()
+    public function testPreloadLinksHaveNoIntegrityWhenTheAssetIsNotHashed(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -345,7 +345,7 @@ final class TagRendererTest extends TestCase
         }
     }
 
-    public function testPreloadLinksUseTheConfiguredCrossorigin()
+    public function testPreloadLinksUseTheConfiguredCrossorigin(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -362,7 +362,7 @@ final class TagRendererTest extends TestCase
         }
     }
 
-    public function testDoesNotRegisterLinksWithoutACurrentRequest()
+    public function testDoesNotRegisterLinksWithoutACurrentRequest(): void
     {
         $renderer = $this->renderer(js: ['build/app-a1b2.js'], requestStack: new RequestStack());
 
@@ -370,7 +370,7 @@ final class TagRendererTest extends TestCase
         $this->assertStringContainsString('<script', $renderer->renderScriptTags('app'));
     }
 
-    public function testPreloadToggleDisablesLinkRegistration()
+    public function testPreloadToggleDisablesLinkRegistration(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -381,7 +381,7 @@ final class TagRendererTest extends TestCase
         $this->assertNull($request->attributes->get('_links'));
     }
 
-    public function testConfiguredCrossoriginOverridesTheAnonymousDefault()
+    public function testConfiguredCrossoriginOverridesTheAnonymousDefault(): void
     {
         $html = $this->renderer(
             js: ['build/app.js'],
@@ -395,7 +395,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testLinkTagsGetIntegrityAndCrossoriginWhenPresent()
+    public function testLinkTagsGetIntegrityAndCrossoriginWhenPresent(): void
     {
         $html = $this->renderer(
             css: ['build/app.css'],
@@ -408,7 +408,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testResolvesReferencesThroughAnExplicitPackage()
+    public function testResolvesReferencesThroughAnExplicitPackage(): void
     {
         $packages = new Packages(
             new PathPackage('/', new EmptyVersionStrategy()),
@@ -420,28 +420,28 @@ final class TagRendererTest extends TestCase
         $this->assertSame('<script src="https://cdn.example.com/build/app.js" type="module"></script>', $html);
     }
 
-    public function testGetCssFilesReturnsResolvedUrlsWithoutTags()
+    public function testGetCssFilesReturnsResolvedUrlsWithoutTags(): void
     {
         $urls = $this->renderer(css: ['build/a.css', 'build/b.css'])->getCssFiles('app');
 
         $this->assertSame(['/build/a.css', '/build/b.css'], $urls);
     }
 
-    public function testLinkAttributesAreApplied()
+    public function testLinkAttributesAreApplied(): void
     {
         $html = $this->renderer(css: ['build/app.css'], linkAttributes: ['media' => 'print'])->renderLinkTags('app');
 
         $this->assertSame('<link rel="stylesheet" href="/build/app.css" media="print">', $html);
     }
 
-    public function testFalseValuedAttributeIsDropped()
+    public function testFalseValuedAttributeIsDropped(): void
     {
         $html = $this->renderer(js: ['build/app.js'], scriptAttributes: ['nomodule' => false])->renderScriptTags('app');
 
         $this->assertSame('<script src="/build/app.js" type="module"></script>', $html);
     }
 
-    public function testAttributeValuesAreHtmlEscaped()
+    public function testAttributeValuesAreHtmlEscaped(): void
     {
         $html = $this->renderer(
             js: ['build/app.js'],
@@ -456,7 +456,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testAnEntryWithNoFilesRendersAnEmptyString()
+    public function testAnEntryWithNoFilesRendersAnEmptyString(): void
     {
         $renderer = $this->renderer();
 
@@ -464,7 +464,7 @@ final class TagRendererTest extends TestCase
         $this->assertSame('', $renderer->renderLinkTags('app'));
     }
 
-    public function testRendersEveryScriptInFileOrder()
+    public function testRendersEveryScriptInFileOrder(): void
     {
         // Load order is the whole point of entrypoints.json: the runtime chunk must precede the app
         // chunk, in the exact order the file lists them.
@@ -477,7 +477,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testRendersEveryStylesheetInFileOrder()
+    public function testRendersEveryStylesheetInFileOrder(): void
     {
         $html = $this->renderer(css: ['build/a.css', 'build/b.css'])->renderLinkTags('app');
 
@@ -488,7 +488,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testEntryExistsDelegatesToTheLookup()
+    public function testEntryExistsDelegatesToTheLookup(): void
     {
         $renderer = new TagRenderer(
             $this->collection(['_default' => new EntrypointsLookup(__DIR__.'/../fixtures/build/entrypoints.json')]),
@@ -499,7 +499,7 @@ final class TagRendererTest extends TestCase
         $this->assertFalse($renderer->entryExists('does-not-exist'));
     }
 
-    public function testModulepreloadHasNoIntegrityWhenTheChunkIsNotHashed()
+    public function testModulepreloadHasNoIntegrityWhenTheChunkIsNotHashed(): void
     {
         // A preload chunk without an SRI entry (e.g. in dev) gets a bare modulepreload link.
         $html = $this->renderer(js: ['build/app.js'], preload: ['build/shared.js'])->renderScriptTags('app');
@@ -511,7 +511,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testPerCallAttributesAreAppliedToScriptTags()
+    public function testPerCallAttributesAreAppliedToScriptTags(): void
     {
         $html = $this->renderer(js: ['build/app.js'])
             ->renderScriptTags('app', attributes: ['defer' => true, 'data-turbo-track' => 'reload']);
@@ -519,14 +519,14 @@ final class TagRendererTest extends TestCase
         $this->assertSame('<script src="/build/app.js" type="module" defer data-turbo-track="reload"></script>', $html);
     }
 
-    public function testPerCallAttributesAreAppliedToLinkTags()
+    public function testPerCallAttributesAreAppliedToLinkTags(): void
     {
         $html = $this->renderer(css: ['build/app.css'])->renderLinkTags('app', attributes: ['media' => 'print']);
 
         $this->assertSame('<link rel="stylesheet" href="/build/app.css" media="print">', $html);
     }
 
-    public function testPerCallAttributesWinOverDefaultAttributes()
+    public function testPerCallAttributesWinOverDefaultAttributes(): void
     {
         $html = $this->renderer(js: ['build/app.js'], scriptAttributes: ['data-turbo-track' => 'reload'])
             ->renderScriptTags('app', attributes: ['data-turbo-track' => 'reload-only-on-this-page']);
@@ -535,7 +535,7 @@ final class TagRendererTest extends TestCase
         $this->assertStringNotContainsString('data-turbo-track="reload"', $html);
     }
 
-    public function testPerCallFalseValueDropsADefaultAttribute()
+    public function testPerCallFalseValueDropsADefaultAttribute(): void
     {
         $html = $this->renderer(js: ['build/app.js'], scriptAttributes: ['defer' => true])
             ->renderScriptTags('app', attributes: ['defer' => false]);
@@ -543,7 +543,7 @@ final class TagRendererTest extends TestCase
         $this->assertSame('<script src="/build/app.js" type="module"></script>', $html);
     }
 
-    public function testPerCallAttributesApplyToScriptsNotToModulepreloadLinks()
+    public function testPerCallAttributesApplyToScriptsNotToModulepreloadLinks(): void
     {
         $html = $this->renderer(js: ['build/app.js'], preload: ['build/shared.js'])
             ->renderScriptTags('app', attributes: ['data-turbo-track' => 'reload']);
@@ -556,7 +556,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testPerCallAttributesApplyToTheHmrClient()
+    public function testPerCallAttributesApplyToTheHmrClient(): void
     {
         // Unified path: per-call attributes now seed the injected client too (issue #71).
         $html = $this->renderer(
@@ -568,7 +568,7 @@ final class TagRendererTest extends TestCase
         $this->assertStringContainsString('src="http://127.0.0.1:5173/build/app.js" type="module" defer></script>', $html);
     }
 
-    public function testAListenerCanAddAnAttributeToEveryRenderedTag()
+    public function testAListenerCanAddAnAttributeToEveryRenderedTag(): void
     {
         $dispatcher = new EventDispatcher();
         $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event): void {
@@ -597,7 +597,7 @@ final class TagRendererTest extends TestCase
         $this->assertStringContainsString('<link rel="stylesheet" href="/build/app.css" nonce="r4nd0m">', $links);
     }
 
-    public function testTheEventReportsTheTagTypeToTheListener()
+    public function testTheEventReportsTheTagTypeToTheListener(): void
     {
         $types = [];
         $dispatcher = new EventDispatcher();
@@ -612,7 +612,7 @@ final class TagRendererTest extends TestCase
         $this->assertSame(['modulepreload', 'script', 'link'], $types);
     }
 
-    public function testAListenerCanRemoveAConfiguredAttribute()
+    public function testAListenerCanRemoveAConfiguredAttribute(): void
     {
         $dispatcher = new EventDispatcher();
         $dispatcher->addListener(RenderAssetTagEvent::class, static function (RenderAssetTagEvent $event): void {
@@ -625,7 +625,7 @@ final class TagRendererTest extends TestCase
         $this->assertSame('<script src="/build/app.js" type="module"></script>', $html);
     }
 
-    public function testModulepreloadLinksTakeTheNonceGivenToTheScripts()
+    public function testModulepreloadLinksTakeTheNonceGivenToTheScripts(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -644,7 +644,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testPreloadHeadersCarryTheNonceAListenerSetOnTheirTag()
+    public function testPreloadHeadersCarryTheNonceAListenerSetOnTheirTag(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -673,7 +673,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testPreloadHeadersFollowTheIntegrityAndCrossoriginAListenerSetOnTheirTag()
+    public function testPreloadHeadersFollowTheIntegrityAndCrossoriginAListenerSetOnTheirTag(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -706,7 +706,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testPreloadHeadersCarryACrossoriginConfiguredOnTheTagWithoutIntegrity()
+    public function testPreloadHeadersCarryACrossoriginConfiguredOnTheTagWithoutIntegrity(): void
     {
         $stack = new RequestStack();
         $stack->push($request = new Request());
@@ -720,7 +720,7 @@ final class TagRendererTest extends TestCase
         );
     }
 
-    public function testPerCallAttributesCannotSpoofIntegrity()
+    public function testPerCallAttributesCannotSpoofIntegrity(): void
     {
         $html = $this->renderer(
             js: ['build/app-a1b2.js'],
@@ -731,21 +731,21 @@ final class TagRendererTest extends TestCase
         $this->assertStringNotContainsString('sha384-FAKE', $html);
     }
 
-    public function testRenderingScriptTagsForAnUnknownBuildThrows()
+    public function testRenderingScriptTagsForAnUnknownBuildThrows(): void
     {
         $this->expectException(UndefinedBuildException::class);
 
         $this->renderer(js: ['build/app.js'])->renderScriptTags('app', build: 'admin');
     }
 
-    public function testRenderingLinkTagsForAnUnknownBuildThrows()
+    public function testRenderingLinkTagsForAnUnknownBuildThrows(): void
     {
         $this->expectException(UndefinedBuildException::class);
 
         $this->renderer(css: ['build/app.css'])->renderLinkTags('app', build: 'admin');
     }
 
-    public function testRendersTheRequestedBuild()
+    public function testRendersTheRequestedBuild(): void
     {
         $renderer = new TagRenderer(
             $this->collection([
@@ -759,7 +759,7 @@ final class TagRendererTest extends TestCase
         $this->assertSame('<script src="/admin/dashboard.js" type="module"></script>', $renderer->renderScriptTags('dashboard', build: 'admin'));
     }
 
-    public function testInjectsEachBuildsHmrClientOncePerRequest()
+    public function testInjectsEachBuildsHmrClientOncePerRequest(): void
     {
         $renderer = new TagRenderer(
             $this->collection([
