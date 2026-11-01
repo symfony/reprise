@@ -13,7 +13,6 @@ on:
         branches:
             - main
         paths-ignore:
-            - '**.md'
             - 'doc/**'
             - 'LICENSE'
 
@@ -25,7 +24,51 @@ concurrency:
 permissions: {}
 
 jobs:
+    changes:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        outputs:
+            lint: ${{ steps.affected.outputs.lint }}
+            js: ${{ steps.affected.outputs.js }}
+            php: ${{ steps.affected.outputs.php }}
+            e2e: ${{ steps.affected.outputs.e2e }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+                  fetch-depth: 2
+            - name: List the affected jobs
+              id: affected
+              run: |
+                  if [ "$GITHUB_EVENT_NAME" != 'pull_request' ]; then
+                      printf '%s=true\n' lint js php e2e | tee -a "$GITHUB_OUTPUT"
+                      exit 0
+                  fi
+
+                  FILES=$(git diff --name-only HEAD^1 HEAD)
+                  # Markdown files only go through oxfmt
+                  CODE=$(echo "$FILES" | grep -v '\.md$' || true)
+                  # The lint job checks no file in these directories
+                  LINTED=$(echo "$FILES" | grep -Ev '^(playground|docs)/' || true)
+
+                  affected() {
+                      echo "$2" | grep -qE "^\.github/workflows/ci\.yml$|$1" && echo true || echo false
+                  }
+
+                  JS='^(assets/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.nvmrc$)'
+                  PHP='^(src/|config/|tests/|composer\.json$|phpunit\.xml\.dist$|phpstan\.dist\.neon$|\.php-cs-fixer\.dist\.php$|composer-dependency-analyser\.php$)'
+
+                  {
+                      echo "lint=$(affected "$JS|\.([cm]?[jt]s|json|ya?ml|md)$" "$LINTED")"
+                      echo "js=$(affected "$JS" "$CODE")"
+                      echo "php=$(affected "$PHP" "$CODE")"
+                      echo "e2e=$(affected "$JS|^(playground/|src/|config/|composer\.json$)" "$CODE")"
+                  } | tee -a "$GITHUB_OUTPUT"
+
     lint:
+        needs: changes
+        if: needs.changes.outputs.lint == 'true'
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -47,6 +90,8 @@ jobs:
 
     test:
         name: Node ${{ matrix.node-version }} on ${{ matrix.os }}
+        needs: changes
+        if: needs.changes.outputs.js == 'true'
         runs-on: ${{ matrix.os }}
         permissions:
             contents: read
@@ -70,6 +115,8 @@ jobs:
 
     bundler-versions:
         name: ${{ matrix.name }}
+        needs: changes
+        if: needs.changes.outputs.js == 'true'
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -104,6 +151,8 @@ jobs:
 
     php:
         name: PHP ${{ matrix.php-version }} + Symfony ${{ matrix.symfony-version }}${{ matrix.dependency-version == 'lowest' && ' lowest' || '' }} on ${{ matrix.os || 'ubuntu-latest' }}
+        needs: changes
+        if: needs.changes.outputs.php == 'true'
         runs-on: ${{ matrix.os || 'ubuntu-latest' }}
         permissions:
             contents: read
@@ -153,6 +202,8 @@ jobs:
 
     e2e:
         name: E2E ${{ matrix.name }}
+        needs: changes
+        if: needs.changes.outputs.e2e == 'true'
         runs-on: ubuntu-latest
         permissions:
             contents: read
@@ -238,6 +289,8 @@ jobs:
                   retention-days: 7
 
     php-qa:
+        needs: changes
+        if: needs.changes.outputs.php == 'true'
         runs-on: ubuntu-latest
         permissions:
             contents: read
