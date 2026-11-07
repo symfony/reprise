@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { createRsbuild } from '@rsbuild/core';
 import { describe, expect, it } from 'vitest';
 import Symfony from '../../src/rsbuild';
-import { tmpDir } from './support';
+import { rsbuildBuild, tmpDir } from './support';
 
 const fixture = join(import.meta.dirname, '../fixtures/stimulus-app');
 
@@ -28,6 +28,29 @@ describe('rsbuild build resolves virtual:symfony/controllers', () => {
             .join('\n');
         expect(code).toContain('greet');
         expect(code).toContain('heavy');
+    });
+
+    it('registers the controllers of a controllersDirs entry under its prefix', async () => {
+        const out = tmpDir('rstim-dirs');
+        await rsbuildBuild(
+            fixture,
+            { app: join(fixture, 'app.js') },
+            {
+                outputPath: out,
+                publicPath: '/build/',
+                stimulus: {
+                    controllersJson: join(fixture, 'controllers.json'),
+                    controllersDirs: { admin: join(fixture, 'admin') },
+                },
+            }
+        );
+        const code = readdirSync(out, { recursive: true })
+            .map(String)
+            .filter((f) => f.endsWith('.js'))
+            .map((f) => readFileSync(join(out, f), 'utf8'))
+            .join('\n');
+        expect(code).toContain('admin--user');
+        expect(code).toContain('greet');
     });
 
     it('fails with a clear message when the virtual module is imported but stimulus is off', async () => {

@@ -52,7 +52,7 @@ export function viteHooks(resolved: ResolvedOptions, state: { isDev: boolean }):
             const stimulus = resolved.stimulus;
             if (stimulus) {
                 // `addWatchFile()` can't cover a controller that doesn't exist yet.
-                server.watcher.add([stimulus.controllersJson, stimulus.controllersDir]);
+                server.watcher.add([stimulus.controllersJson, ...Object.values(stimulus.controllersDirs)]);
                 server.watcher.on('all', (_event, file) => {
                     if (!affectsControllersModule(file, stimulus)) return;
                     const client = server.environments.client;

@@ -43,12 +43,19 @@ function normalizeStimulus(stimulus: Options['stimulus'], cwd: string): Resolved
     const controllersJson = path.isAbsolute(raw.controllersJson)
         ? raw.controllersJson
         : path.join(cwd, raw.controllersJson);
-    const controllersDir = raw.controllersDir
-        ? path.isAbsolute(raw.controllersDir)
-            ? raw.controllersDir
-            : path.join(cwd, raw.controllersDir)
-        : path.join(path.dirname(controllersJson), 'controllers');
-    return { controllersJson, controllersDir };
+    if (raw.controllersDir && raw.controllersDirs)
+        throw new Error(
+            '@symfony/reprise: the Stimulus options "controllersDir" and "controllersDirs" cannot be used together. ' +
+                'Set the "" key of "controllersDirs" instead of "controllersDir".'
+        );
+    const dirs = {
+        '': raw.controllersDir || path.join(path.dirname(controllersJson), 'controllers'),
+        ...raw.controllersDirs,
+    };
+    const controllersDirs = Object.fromEntries(
+        Object.entries(dirs).map(([prefix, dir]) => [prefix, path.isAbsolute(dir) ? dir : path.join(cwd, dir)])
+    );
+    return { controllersJson, controllersDirs };
 }
 
 export function normalizeOptions(options: Options | undefined, cwd: string): ResolvedOptions {

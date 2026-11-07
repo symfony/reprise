@@ -11,7 +11,8 @@ const LAZY_GREET = "/* stimulusFetch: 'lazy' */\nexport default class {}\n";
 const GREET_IS_LAZY = /"greet":\s*\(\)\s*=>/;
 const WAIT = { timeout: 10_000 };
 
-function stimulusApp(): string {
+// The extra controllers dir sits outside the root, which the bundler would watch anyway.
+function stimulusApp(): { dir: string; admin: string } {
     const dir = tmpDir('stim-watch');
     mkdirSync(join(dir, 'controllers'));
     writeFileSync(
@@ -21,12 +22,12 @@ function stimulusApp(): string {
     );
     writeFileSync(join(dir, 'controllers.json'), '{ "controllers": {} }\n');
     writeFileSync(join(dir, 'controllers/greet_controller.js'), 'export default class {}\n');
-    return dir;
+    return { dir, admin: tmpDir('stim-watch-admin') };
 }
 
 describe('the dev server picks up Stimulus changes without a restart', () => {
     it('vite', async () => {
-        const dir = stimulusApp();
+        const { dir, admin } = stimulusApp();
         const server = await createServer({
             root: dir,
             logLevel: 'silent',
@@ -35,7 +36,10 @@ describe('the dev server picks up Stimulus changes without a restart', () => {
                 SymfonyVite({
                     outputPath: join(dir, 'public/build'),
                     publicPath: '/build/',
-                    stimulus: join(dir, 'controllers.json'),
+                    stimulus: {
+                        controllersJson: join(dir, 'controllers.json'),
+                        controllersDirs: { admin },
+                    },
                 }),
             ],
         });
@@ -49,6 +53,10 @@ describe('the dev server picks up Stimulus changes without a restart', () => {
             const initial = await read();
             expect(initial).toContain('"greet"');
             expect(initial).not.toMatch(GREET_IS_LAZY);
+
+            await expect.poll(() => Object.keys(server.watcher.getWatched()), WAIT).toContain(admin);
+            writeFileSync(join(admin, 'user_controller.js'), 'export default class {}\n');
+            await expect.poll(read, WAIT).toContain('"admin--user"');
 
             // On Linux, chokidar attaches to controllers/ asynchronously; a file written before that is never reported.
             await expect.poll(() => Object.keys(server.watcher.getWatched()), WAIT).toContain(join(dir, 'controllers'));
@@ -66,7 +74,7 @@ describe('the dev server picks up Stimulus changes without a restart', () => {
     });
 
     it('rsbuild', async () => {
-        const dir = stimulusApp();
+        const { dir, admin } = stimulusApp();
         const out = join(dir, 'public/build');
         const compile = createCompileWaiter();
         const rsbuild = await createRsbuild({
@@ -77,7 +85,14 @@ describe('the dev server picks up Stimulus changes without a restart', () => {
                 server: { port: await getFreePort() },
                 dev: { writeToDisk: true },
                 plugins: [
-                    SymfonyRsbuild({ outputPath: out, publicPath: '/build/', stimulus: join(dir, 'controllers.json') }),
+                    SymfonyRsbuild({
+                        outputPath: out,
+                        publicPath: '/build/',
+                        stimulus: {
+                            controllersJson: join(dir, 'controllers.json'),
+                            controllersDirs: { admin },
+                        },
+                    }),
                     compile.plugin,
                 ],
             },
@@ -97,6 +112,11 @@ describe('the dev server picks up Stimulus changes without a restart', () => {
             expect(read()).not.toMatch(GREET_IS_LAZY);
 
             let rebuilt = compile.next();
+            writeFileSync(join(admin, 'user_controller.js'), 'export default class {}\n');
+            await vi.waitFor(() => rebuilt, WAIT);
+            expect(read()).toContain('"admin--user"');
+
+            rebuilt = compile.next();
             writeFileSync(join(dir, 'controllers/new_controller.js'), 'export default class {}\n');
             await vi.waitFor(() => rebuilt, WAIT);
             expect(read()).toContain('"new"');

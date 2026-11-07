@@ -110,16 +110,29 @@ export function generateControllersModule(opts: ResolvedStimulusOptions, root: s
         }
     }
 
-    for (const rel of listLocalControllers(opts.controllersDir)) {
-        const abs = path.join(opts.controllersDir, rel);
-        const identifier = localIdentifier(rel);
-        controllers.set(identifier, {
-            identifier,
-            fetch: LAZY_COMMENT_RE.test(readFileSync(abs, 'utf8')) ? 'lazy' : 'eager',
-            // Forward slashes: a portable ESM specifier (a Windows backslash path isn't).
-            main: slash(abs),
-            autoimports: [],
-        });
+    const localFiles = new Map<string, { abs: string; dir: string }>();
+    for (const [prefix, dir] of Object.entries(opts.controllersDirs)) {
+        const idPrefix = prefix ? `${normalizeIdentifier(prefix)}--` : '';
+        for (const rel of listLocalControllers(dir)) {
+            const abs = path.join(dir, rel);
+            const identifier = idPrefix + localIdentifier(rel);
+            const existing = localFiles.get(identifier);
+            if (existing?.abs === abs) continue;
+            // Within one directory the last file wins, as it always has.
+            if (existing && existing.dir !== dir)
+                throw new Error(
+                    `@symfony/reprise: the Stimulus controllers "${existing.abs}" and "${abs}" both register the identifier "${identifier}". ` +
+                        'Rename one of them, or give its directory another prefix in "controllersDirs".'
+                );
+            localFiles.set(identifier, { abs, dir });
+            controllers.set(identifier, {
+                identifier,
+                fetch: LAZY_COMMENT_RE.test(readFileSync(abs, 'utf8')) ? 'lazy' : 'eager',
+                // Forward slashes: a portable ESM specifier (a Windows backslash path isn't).
+                main: slash(abs),
+                autoimports: [],
+            });
+        }
     }
 
     return render([...controllers.values()], isDev);
@@ -185,14 +198,17 @@ function render(controllers: ResolvedController[], isDev: boolean): string {
 export function stimulusWatchFiles(opts: ResolvedStimulusOptions): string[] {
     return [
         opts.controllersJson,
-        ...listLocalControllers(opts.controllersDir).map((rel) => path.join(opts.controllersDir, rel)),
+        ...Object.values(opts.controllersDirs).flatMap((dir) =>
+            listLocalControllers(dir).map((rel) => path.join(dir, rel))
+        ),
     ];
 }
 
 export function affectsControllersModule(file: string, opts: ResolvedStimulusOptions): boolean {
     return (
         file === opts.controllersJson ||
-        (file.startsWith(opts.controllersDir + path.sep) && LOCAL_CONTROLLER_RE.test(file))
+        (LOCAL_CONTROLLER_RE.test(file) &&
+            Object.values(opts.controllersDirs).some((dir) => file.startsWith(dir + path.sep)))
     );
 }
 

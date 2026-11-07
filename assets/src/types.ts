@@ -141,13 +141,24 @@ export interface StimulusOptions {
     controllersJson: string;
     /** Local controllers dir. Default: `<dir of controllersJson>/controllers`. */
     controllersDir?: string;
+    /**
+     * More local controllers dirs, scanned on top of the default one. Each key prefixes the
+     * identifiers of its dir's controllers; the `''` key replaces the default dir. Cannot be
+     * combined with `controllersDir`.
+     *
+     * ```js
+     * // assets/admin/controllers/user_controller.js -> "admin--user"
+     * { controllersDirs: { admin: 'assets/admin/controllers' } }
+     * ```
+     */
+    controllersDirs?: Record<string, string>;
 }
 
 export interface ResolvedStimulusOptions {
     /** Absolute path to controllers.json. */
     controllersJson: string;
-    /** Absolute path to the local controllers directory. */
-    controllersDir: string;
+    /** Identifier prefix -> absolute path to a local controllers directory. */
+    controllersDirs: Record<string, string>;
 }
 
 export interface CopyEntry {

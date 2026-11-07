@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { generateControllersModule } from '../../src/core/stimulus';
 
 const root = join(import.meta.dirname, '../fixtures/stimulus');
-const opts = { controllersJson: join(root, 'controllers.json'), controllersDir: join(root, 'does-not-exist') };
+const opts = { controllersJson: join(root, 'controllers.json'), controllersDirs: { '': join(root, 'does-not-exist') } };
 
 // Local import paths are emitted with forward slashes (a portable ESM specifier), so compare
 // expected filesystem paths in the same shape — otherwise the assertions fail on Windows.
@@ -33,7 +33,7 @@ describe('generateControllersModule — third-party', () => {
     });
 
     it('throws a helpful error when a declared package is not installed', () => {
-        const bad = { controllersJson: join(root, 'controllers.json'), controllersDir: opts.controllersDir };
+        const bad = { controllersJson: join(root, 'controllers.json'), controllersDirs: opts.controllersDirs };
         expect(() => generateControllersModule(bad, '/nonexistent-root', false)).toThrow(/npm install|could not/i);
     });
 });
@@ -42,7 +42,7 @@ describe('generateControllersModule — controllers.json errors', () => {
     it('throws a clear error when the controllers.json file is missing', () => {
         const missing = {
             controllersJson: join(root, 'no-such-controllers.json'),
-            controllersDir: opts.controllersDir,
+            controllersDirs: opts.controllersDirs,
         };
         expect(() => generateControllersModule(missing, root, false)).toThrow(
             /@symfony\/reprise: cannot read the Stimulus controllers file/
@@ -52,14 +52,17 @@ describe('generateControllersModule — controllers.json errors', () => {
     it('throws a clear error when the controllers.json file is not valid JSON', () => {
         const malformed = {
             controllersJson: join(root, 'malformed-controllers.json'),
-            controllersDir: opts.controllersDir,
+            controllersDirs: opts.controllersDirs,
         };
         expect(() => generateControllersModule(malformed, root, false)).toThrow(/is not valid JSON/);
     });
 });
 
 describe('generateControllersModule — local', () => {
-    const localOpts = { controllersJson: join(root, 'controllers.json'), controllersDir: join(root, 'controllers') };
+    const localOpts = {
+        controllersJson: join(root, 'controllers.json'),
+        controllersDirs: { '': join(root, 'controllers') },
+    };
 
     it('emits an eager local controller by absolute path', () => {
         const src = generateControllersModule(localOpts, root, false);
@@ -110,7 +113,10 @@ describe('generateControllersModule — local', () => {
     });
 
     it('returns valid empty maps when there are no controllers at all', () => {
-        const empty = { controllersJson: join(root, 'empty-controllers.json'), controllersDir: join(root, 'nope') };
+        const empty = {
+            controllersJson: join(root, 'empty-controllers.json'),
+            controllersDirs: { '': join(root, 'nope') },
+        };
         const src = generateControllersModule(empty, root, false);
         expect(src).toContain('export const eagerControllers = {}');
         expect(src).toContain('export const lazyControllers = {}');
@@ -140,12 +146,81 @@ describe('generateControllersModule — local', () => {
     });
 });
 
+describe('generateControllersModule — extra controllers directories', () => {
+    const json = join(root, 'empty-controllers.json');
+
+    it('prefixes the identifiers of a controllersDirs entry with its key', () => {
+        const src = generateControllersModule(
+            { controllersJson: json, controllersDirs: { backoffice: join(root, 'controllers/admin') } },
+            root,
+            false
+        );
+        expect(src).toContain(posix(join(root, 'controllers/admin/user_controller.js')));
+        expect(src).toMatch(/"backoffice--user": controller_\d+/);
+    });
+
+    it('normalizes the prefix like a path segment', () => {
+        const src = generateControllersModule(
+            { controllersJson: json, controllersDirs: { 'back_office/admin': join(root, 'controllers/admin') } },
+            root,
+            false
+        );
+        expect(src).toMatch(/"back-office--admin--user": controller_\d+/);
+    });
+
+    it('registers the controllers of every directory, the empty key without a prefix', () => {
+        const src = generateControllersModule(
+            {
+                controllersJson: json,
+                controllersDirs: { '': join(root, 'controllers'), backoffice: join(root, 'controllers/admin') },
+            },
+            root,
+            false
+        );
+        expect(src).toMatch(/"greet": controller_\d+/);
+        expect(src).toMatch(/"admin--user": controller_\d+/);
+        expect(src).toMatch(/"backoffice--user": controller_\d+/);
+    });
+
+    it('registers a file reached through two directories under the same identifier only once', () => {
+        const src = generateControllersModule(
+            {
+                controllersJson: json,
+                controllersDirs: { '': join(root, 'controllers'), admin: join(root, 'controllers/admin') },
+            },
+            root,
+            false
+        );
+        expect(src.split(`"admin--user"`).length - 1).toBe(1);
+    });
+
+    it('keeps the last file when two controllers of the same directory share an identifier', () => {
+        const src = generateControllersModule(
+            { controllersJson: json, controllersDirs: { '': join(root, 'same-dir') } },
+            root,
+            false
+        );
+        expect(src).toContain(posix(join(root, 'same-dir/greet_controller.js')));
+        expect(src).not.toContain(posix(join(root, 'same-dir/greet-controller.js')));
+    });
+
+    it('throws when controllers of two directories register the same identifier', () => {
+        const colliding = {
+            controllersJson: json,
+            controllersDirs: { '': join(root, 'controllers'), admin: join(root, 'other-controllers') },
+        };
+        expect(() => generateControllersModule(colliding, root, false)).toThrow(
+            /@symfony\/reprise: the Stimulus controllers ".*user_controller\.js" and ".*user_controller\.js" both register the identifier "admin--user"/
+        );
+    });
+});
+
 describe('generateControllersModule — identifier collision', () => {
     // A local controller whose filename yields the same identifier as a third-party one
     // (contrived — local ids are short, third-party ids are long/scoped — but possible).
     const collisionOpts = {
         controllersJson: join(root, 'collision-controllers.json'),
-        controllersDir: join(root, 'collision'),
+        controllersDirs: { '': join(root, 'collision') },
     };
 
     it('lets a local controller override a colliding third-party identifier (local wins, emitted once)', () => {
