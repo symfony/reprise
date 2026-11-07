@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.4.0
+
+- Add `controllersDirs` Stimulus option to register local controllers from more directories on top of the default one, each key prefixing the identifiers of its directory's controllers (`admin` turns `user_controller.js` into `admin--user`)
+
 ## 1.3.0
 
 - Dispatch `RenderAssetTagEvent` for `<link rel="modulepreload">` tags too (new `modulepreload` type: `RenderAssetTagEvent::TYPE_MODULEPRELOAD`, `isModulepreload()`)

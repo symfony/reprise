@@ -268,6 +268,54 @@ block or a single-line comment both work, even on dummy controllers that export 
 (``// stimulusFetch: 'lazy'`` works too, and so does a preserved ``/*! stimulusFetch: 'lazy' */`` comment: the form
 tsc and esbuild keep through minification.)
 
+**More controllers directories.** To register controllers from other directories on top of the default
+``assets/controllers`` one, list them in ``controllersDirs``:
+
+.. code-block:: javascript
+
+    // vite.config.ts
+    import { defineConfig } from 'vite'
+    import Symfony from '@symfony/reprise/vite'
+
+    export default defineConfig({
+      // ...
+      plugins: [
+        Symfony({
+          stimulus: {
+            controllersJson: 'assets/controllers.json',
+            controllersDirs: {
+              admin: 'assets/admin/controllers',
+            },
+          },
+        }),
+      ],
+    })
+
+.. code-block:: javascript
+
+    // rsbuild.config.ts
+    import { defineConfig } from '@rsbuild/core'
+    import Symfony from '@symfony/reprise/rsbuild'
+
+    export default defineConfig({
+      // ...
+      plugins: [
+        Symfony({
+          stimulus: {
+            controllersJson: 'assets/controllers.json',
+            controllersDirs: {
+              admin: 'assets/admin/controllers',
+            },
+          },
+        }),
+      ],
+    })
+
+Each key prefixes the identifiers of its directory's controllers: ``assets/admin/controllers/user_controller.js``
+becomes ``admin--user``, while the default directory keeps no prefix. To replace that default directory, use the empty
+key ``''`` instead; ``controllersDirs`` cannot be combined with ``controllersDir``. If controllers from two directories
+end up with the same identifier, the build fails and names both files.
+
 **In dev.** While the Vite or Rsbuild dev server runs, Reprise regenerates the controllers module and reloads the
 page when a local controller is added or removed, when a controller's ``stimulusFetch: 'lazy'`` comment is added or
 removed, or when ``controllers.json`` itself changes (for example right after Symfony Flex updates it following a

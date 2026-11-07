@@ -98,7 +98,7 @@ describe('normalizeOptions', () => {
         const r = normalizeOptions({ stimulus: 'assets/controllers.json' }, '/app');
         expect(r.stimulus).toEqual({
             controllersJson: join('/app', 'assets/controllers.json'),
-            controllersDir: join('/app', 'assets/controllers'),
+            controllersDirs: { '': join('/app', 'assets/controllers') },
         });
     });
 
@@ -109,8 +109,48 @@ describe('normalizeOptions', () => {
         );
         expect(r.stimulus).toEqual({
             controllersJson: join('/app', 'assets/controllers.json'),
-            controllersDir: join('/app', 'assets/stimulus'),
+            controllersDirs: { '': join('/app', 'assets/stimulus') },
         });
+    });
+
+    it('merges controllersDirs over the default unprefixed controllers dir', () => {
+        const r = normalizeOptions(
+            {
+                stimulus: {
+                    controllersJson: 'assets/controllers.json',
+                    controllersDirs: { admin: 'assets/admin/controllers', shop: '/abs/shop/controllers' },
+                },
+            },
+            '/app'
+        );
+        expect(r.stimulus?.controllersDirs).toEqual({
+            '': join('/app', 'assets/controllers'),
+            admin: join('/app', 'assets/admin/controllers'),
+            shop: '/abs/shop/controllers',
+        });
+    });
+
+    it('lets the empty key of controllersDirs replace the default controllers dir', () => {
+        const r = normalizeOptions(
+            { stimulus: { controllersJson: 'assets/controllers.json', controllersDirs: { '': 'src/controllers' } } },
+            '/app'
+        );
+        expect(r.stimulus?.controllersDirs).toEqual({ '': join('/app', 'src/controllers') });
+    });
+
+    it('rejects controllersDir and controllersDirs set together', () => {
+        expect(() =>
+            normalizeOptions(
+                {
+                    stimulus: {
+                        controllersJson: 'assets/controllers.json',
+                        controllersDir: 'assets/controllers',
+                        controllersDirs: { admin: 'assets/admin/controllers' },
+                    },
+                },
+                '/app'
+            )
+        ).toThrow(/"controllersDir" and "controllersDirs" cannot be used together/);
     });
 
     it('leaves integrity undefined when not configured', () => {

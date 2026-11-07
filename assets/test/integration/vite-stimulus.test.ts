@@ -26,6 +26,25 @@ describe('vite build resolves virtual:symfony/controllers', () => {
         expect(files.some((f) => f.endsWith('.js') && f !== appJs)).toBe(true);
     });
 
+    it('registers the controllers of a controllersDirs entry under its prefix', async () => {
+        const out = tmpDir('stim-dirs');
+        await viteBuild(fixture, input, {
+            outputPath: out,
+            publicPath: '/build/',
+            stimulus: {
+                controllersJson: join(fixture, 'controllers.json'),
+                controllersDirs: { admin: join(fixture, 'admin') },
+            },
+        });
+        const code = readdirSync(out, { recursive: true })
+            .map(String)
+            .filter((f) => f.endsWith('.js'))
+            .map((f) => readFileSync(join(out, f), 'utf8'))
+            .join('\n');
+        expect(code).toContain('admin--user');
+        expect(code).toContain('greet');
+    });
+
     it('fails with a clear message when the virtual module is imported but stimulus is off', async () => {
         const out = tmpDir('stim-off');
         await expect(
