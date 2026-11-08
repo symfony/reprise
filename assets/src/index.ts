@@ -42,7 +42,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options, _
             for (const file of stimulusWatchFiles(resolved.stimulus)) this.addWatchFile(file);
             const native = this.getNativeBuildContext?.();
             if (native?.framework === 'rspack')
-                native.loaderContext?.addContextDependency(resolved.stimulus.controllersDir);
+                for (const dir of Object.values(resolved.stimulus.controllersDirs))
+                    native.loaderContext?.addContextDependency(dir);
             return generateControllersModule(resolved.stimulus, cwd, state.isDev);
         },
 
