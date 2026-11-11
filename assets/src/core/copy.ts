@@ -1,6 +1,6 @@
 import type { ResolvedCopyEntry } from '../types';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, relative, sep } from 'node:path';
 
 export interface CopyResult {
@@ -57,10 +57,9 @@ export function hashedName(logicalName: string, hash: string): string {
     return `${base}.${hash}${ext}`;
 }
 
-export function resolveCopyFiles(entries: ResolvedCopyEntry[], build: boolean): CopyResult[] {
+export function resolveCopyFiles(entries: ResolvedCopyEntry[]): CopyResult[] {
     return enumerateCopyFiles(entries).map(({ absPath, logicalName, hash }) => {
         const source = readFileSync(absPath);
-        if (!build) return { logicalName, physicalName: logicalName, versionQuery: '', source };
         const version = contentHash(source);
         return hash
             ? { logicalName, physicalName: hashedName(logicalName, version), versionQuery: '', source }
@@ -68,10 +67,21 @@ export function resolveCopyFiles(entries: ResolvedCopyEntry[], build: boolean): 
     });
 }
 
-export function writeCopyFiles(files: CopyResult[], outputPath: string): void {
-    for (const file of files) {
-        const dest = join(outputPath, file.physicalName);
-        mkdirSync(dirname(dest), { recursive: true });
-        writeFileSync(dest, file.source);
-    }
+// Rsbuild calls this on every dev rebuild: `written` lets it skip the files whose source did not change.
+export function writeDevCopyFiles(
+    entries: ResolvedCopyEntry[],
+    outputPath: string,
+    written: Map<string, string> = new Map()
+): Omit<CopyResult, 'source'>[] {
+    return enumerateCopyFiles(entries).map(({ absPath, logicalName }) => {
+        const { mtimeMs, size } = statSync(absPath);
+        const stamp = `${absPath}:${mtimeMs}:${size}`;
+        if (written.get(logicalName) !== stamp) {
+            const dest = join(outputPath, logicalName);
+            mkdirSync(dirname(dest), { recursive: true });
+            writeFileSync(dest, readFileSync(absPath));
+            written.set(logicalName, stamp);
+        }
+        return { logicalName, physicalName: logicalName, versionQuery: '' };
+    });
 }
