@@ -129,8 +129,9 @@ export function rsbuildHooks(
                         const graph = statsToGraph(
                             stats.toJson({
                                 all: false,
-                                assets: true,
-                                cachedAssets: true,
+                                // Dev leaves the bundler's assets out of the manifest.
+                                assets: !isDev,
+                                cachedAssets: !isDev,
                                 entrypoints: true,
                             }) as RspackStats,
                             styleEntries
