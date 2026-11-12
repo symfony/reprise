@@ -2,7 +2,7 @@ import type { UnpluginOptions } from 'unplugin';
 import type { CopyResult } from '../core/copy';
 import type { NormalizedGraph, ResolvedOptions } from '../types';
 import { bundleToGraph, configToDevGraph } from '../collectors/vite';
-import { resolveCopyFiles, writeCopyFiles } from '../core/copy';
+import { resolveCopyFiles, writeDevCopyFiles } from '../core/copy';
 import { resolveDevOrigin } from '../core/dev-server';
 import { writeMetadata } from '../core/emit';
 import { resolvePublicPath } from '../core/options';
@@ -27,7 +27,7 @@ export function viteHooks(resolved: ResolvedOptions, state: { isDev: boolean }):
 
         generateBundle(_outputOptions, bundle) {
             const graph = bundleToGraph(bundle, root);
-            const copyFiles = resolveCopyFiles(resolved.copy, true);
+            const copyFiles = resolveCopyFiles(resolved.copy);
             for (const file of copyFiles) {
                 this.emitFile({ type: 'asset', fileName: file.physicalName, source: file.source });
             }
@@ -86,8 +86,7 @@ export function viteHooks(resolved: ResolvedOptions, state: { isDev: boolean }):
                     reactRefresh: usesReactPlugin ? `${urlPrefix}@react-refresh` : null,
                 };
                 try {
-                    const copyFiles = resolveCopyFiles(resolved.copy, false);
-                    writeCopyFiles(copyFiles, resolved.outputPath);
+                    const copyFiles = writeDevCopyFiles(resolved.copy, resolved.outputPath);
                     writeMetadata(resolved, configToDevGraph(server.config), {
                         isProd: false,
                         devServer,

@@ -65,7 +65,7 @@ export interface MetadataInput {
     isProd: boolean;
     devServer: DevServer | null;
     /** Keyed in the manifest only: the adapter writes or emits the files themselves. */
-    copyFiles: CopyResult[];
+    copyFiles: Omit<CopyResult, 'source'>[];
 }
 
 /** Call once the build output is on disk: SRI hashes are read from there. */

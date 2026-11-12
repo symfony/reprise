@@ -1,7 +1,9 @@
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ResolvedCopyEntry } from '../../src/types';
-import { contentHash, enumerateCopyFiles, hashedName, resolveCopyFiles } from '../../src/core/copy';
+import { contentHash, enumerateCopyFiles, hashedName, resolveCopyFiles, writeDevCopyFiles } from '../../src/core/copy';
 
 const src = join(import.meta.dirname, '../fixtures/copy-src');
 const binSrc = join(import.meta.dirname, '../fixtures/copy-binary');
@@ -65,30 +67,47 @@ describe('hashedName', () => {
 });
 
 describe('resolveCopyFiles', () => {
-    it('uses hashed physical names when hashed=true', () => {
-        const logo = resolveCopyFiles([entry()], true).find((f) => f.logicalName === 'images/logo.svg')!;
+    it('uses hashed physical names', () => {
+        const logo = resolveCopyFiles([entry()]).find((f) => f.logicalName === 'images/logo.svg')!;
         expect(logo.physicalName).toMatch(/^images\/logo\.[0-9a-f]{8}\.svg$/);
         expect(logo.source).toBeInstanceOf(Buffer);
     });
 
-    it('uses verbatim physical names when hashed=false', () => {
-        const logo = resolveCopyFiles([entry()], false).find((f) => f.logicalName === 'images/logo.svg')!;
-        expect(logo.physicalName).toBe('images/logo.svg');
-        expect(logo.versionQuery).toBe('');
-    });
-
-    it('keeps the logical path and moves the hash to versionQuery for `hash: false` entries in build', () => {
-        const logo = resolveCopyFiles([entry({ hash: false })], true).find((f) => f.logicalName === 'images/logo.svg')!;
+    it('keeps the logical path and moves the hash to versionQuery for `hash: false` entries', () => {
+        const logo = resolveCopyFiles([entry({ hash: false })]).find((f) => f.logicalName === 'images/logo.svg')!;
         expect(logo.physicalName).toBe('images/logo.svg');
         expect(logo.versionQuery).toMatch(/^\?[0-9a-f]{8}$/);
     });
+});
 
-    it('does not version `hash: false` entries in dev', () => {
-        const logo = resolveCopyFiles([entry({ hash: false })], false).find(
-            (f) => f.logicalName === 'images/logo.svg'
-        )!;
-        expect(logo.physicalName).toBe('images/logo.svg');
-        expect(logo.versionQuery).toBe('');
+describe('writeDevCopyFiles', () => {
+    const tmp = (): string => mkdtempSync(join(tmpdir(), 'reprise-copy-'));
+
+    it.each([true, false])('writes the files verbatim and keys them unversioned (hash: %s)', (hash) => {
+        const out = tmp();
+        const logo = writeDevCopyFiles([entry({ hash })], out).find((f) => f.logicalName === 'images/logo.svg');
+        expect(logo).toEqual({ logicalName: 'images/logo.svg', physicalName: 'images/logo.svg', versionQuery: '' });
+        expect(readFileSync(join(out, 'images/logo.svg')).equals(readFileSync(join(src, 'logo.svg')))).toBe(true);
+    });
+
+    it('skips a file whose source is unchanged since the previous call', () => {
+        const out = tmp();
+        const written = new Map<string, string>();
+        writeDevCopyFiles([entry()], out, written);
+        writeFileSync(join(out, 'images/logo.svg'), 'stale');
+        writeDevCopyFiles([entry()], out, written);
+        expect(readFileSync(join(out, 'images/logo.svg'), 'utf8')).toBe('stale');
+    });
+
+    it('rewrites a file whose source changed since the previous call', () => {
+        const from = tmp();
+        const out = tmp();
+        const written = new Map<string, string>();
+        writeFileSync(join(from, 'logo.svg'), 'v1');
+        writeDevCopyFiles([entry({ from })], out, written);
+        writeFileSync(join(from, 'logo.svg'), 'version 2');
+        writeDevCopyFiles([entry({ from })], out, written);
+        expect(readFileSync(join(out, 'images/logo.svg'), 'utf8')).toBe('version 2');
     });
 });
 

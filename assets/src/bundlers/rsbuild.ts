@@ -4,7 +4,7 @@ import type { CopyResult } from '../core/copy';
 import type { WatchIgnoreRule } from '../core/emit';
 import type { ResolvedOptions } from '../types';
 import { statsToGraph, styleEntryNames } from '../collectors/rspack';
-import { resolveCopyFiles, writeCopyFiles } from '../core/copy';
+import { resolveCopyFiles, writeDevCopyFiles } from '../core/copy';
 import { resolveDevOrigin, urlHost } from '../core/dev-server';
 import { watchIgnore, writeMetadata } from '../core/emit';
 import { isAbsolutePublicPath, resolvePublicPath } from '../core/options';
@@ -112,6 +112,7 @@ export function rsbuildHooks(
                     // entries on the way to Rspack, and this is the form the stats keys match.
                     const styleEntries = styleEntryNames(c.options.entry as RspackEntry);
                     let copiedInBuild: CopyResult[] = [];
+                    const writtenInDev = new Map<string, string>();
 
                     // Ahead of Rsbuild's own `done` taps, which read `hasErrors()` to report the build and settle it.
                     c.hooks.done.tap({ name: '@symfony/reprise', stage: -Infinity }, (stats) => {
@@ -137,11 +138,9 @@ export function rsbuildHooks(
                             styleEntries
                         );
                         try {
-                            let copyFiles = copiedInBuild;
-                            if (isDev) {
-                                copyFiles = resolveCopyFiles(resolved.copy, false);
-                                writeCopyFiles(copyFiles, resolved.outputPath);
-                            }
+                            const copyFiles = isDev
+                                ? writeDevCopyFiles(resolved.copy, resolved.outputPath, writtenInDev)
+                                : copiedInBuild;
                             writeMetadata(resolved, graph, {
                                 isProd: !isDev,
                                 devServer: origin ? { origin, client: null } : null,
@@ -166,7 +165,7 @@ export function rsbuildHooks(
                                 stage: c.rspack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
                             },
                             () => {
-                                copiedInBuild = resolveCopyFiles(resolved.copy, true);
+                                copiedInBuild = resolveCopyFiles(resolved.copy);
                                 for (const file of copiedInBuild) {
                                     compilation.emitAsset(
                                         file.physicalName,

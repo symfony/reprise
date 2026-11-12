@@ -1,15 +1,26 @@
 import type { RsbuildPlugin } from '@rsbuild/core';
 import type { ViteDevServer } from 'vite';
-import { existsSync, readFileSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readJson, rsbuildBuild, rsbuildDev, tmpDir, viteBuild, viteDev } from './support';
+import { createCompileWaiter, readJson, rsbuildBuild, rsbuildDev, tmpDir, viteBuild, viteDev } from './support';
 
 const fixture = join(import.meta.dirname, '../fixtures/basic');
 const input = { app: join(fixture, 'app.js') };
 const copySrc = join(import.meta.dirname, '../fixtures/copy-src');
 const copyBinary = join(import.meta.dirname, '../fixtures/copy-binary');
 const copy = [{ from: copySrc, to: 'images' }];
+const WAIT = { timeout: 10_000 };
+
+// A copy of the fixture, so a rebuild can be triggered by editing its entry.
+function editableFixture(): string {
+    const dir = tmpDir('copy-dev-src');
+    cpSync(fixture, dir, { recursive: true });
+    // Backdated, or the watcher can count the copy itself as a change.
+    const past = new Date(Date.now() - 60_000);
+    for (const path of [join(dir, 'app.js'), dir]) utimesSync(path, past, past);
+    return dir;
+}
 
 describe('vite copy', () => {
     it('build: copied files are hashed on disk and keyed in manifest.json', async () => {
@@ -129,6 +140,32 @@ describe('vite copy', () => {
             expect(existsSync(join(out, 'images/logo.svg'))).toBe(true);
         });
     });
+
+    it('dev: a rebuild leaves unchanged copied files alone', async () => {
+        const dir = editableFixture();
+        const out = tmpDir('copy-vite-dev-rebuild');
+        const server = await viteDev(
+            dir,
+            { app: join(dir, 'app.js') },
+            { outputPath: out, publicPath: '/build/', copy },
+            { server: { host: '127.0.0.1' } }
+        );
+        try {
+            writeFileSync(join(out, 'images/logo.svg'), 'stale');
+            let changed = false;
+            server.watcher.on('change', () => (changed = true));
+            // Written again on each poll: the watcher can miss a change made before it is fully attached.
+            await expect
+                .poll(() => {
+                    appendFileSync(join(dir, 'app.js'), 'console.log(2);\n');
+                    return changed;
+                }, WAIT)
+                .toBe(true);
+            expect(readFileSync(join(out, 'images/logo.svg'), 'utf8')).toBe('stale');
+        } finally {
+            await server.close();
+        }
+    });
 });
 
 describe('rsbuild copy', () => {
@@ -237,6 +274,27 @@ describe('rsbuild copy', () => {
             expect(manifest['build/images/logo.svg']).toBe('/build/images/logo.svg');
             expect(manifest['build/images/icons/cat.svg']).toBe('/build/images/icons/cat.svg');
             expect(existsSync(join(out, 'images/logo.svg'))).toBe(true);
+        } finally {
+            await server.server.close();
+        }
+    });
+
+    it('dev: a rebuild leaves unchanged copied files alone', async () => {
+        const dir = editableFixture();
+        const out = tmpDir('copy-rsbuild-dev-rebuild');
+        const compile = createCompileWaiter();
+        const server = await rsbuildDev(
+            dir,
+            { app: join(dir, 'app.js') },
+            { outputPath: out, publicPath: '/build/', copy },
+            { plugins: [compile.plugin] }
+        );
+        try {
+            writeFileSync(join(out, 'images/logo.svg'), 'stale');
+            const rebuilt = compile.next();
+            appendFileSync(join(dir, 'app.js'), 'console.log(2);\n');
+            expect(await rebuilt).toEqual([]);
+            expect(readFileSync(join(out, 'images/logo.svg'), 'utf8')).toBe('stale');
         } finally {
             await server.server.close();
         }
