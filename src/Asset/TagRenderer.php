@@ -244,12 +244,15 @@ final class TagRenderer implements ResetInterface
      */
     private function attributes(array $attributes): string
     {
-        $attributes = array_filter($attributes, static fn (bool|string $v) => false !== $v);
+        $parts = [];
+        foreach ($attributes as $name => $value) {
+            if (true === $value) {
+                $parts[] = $name;
+            } elseif (false !== $value) {
+                $parts[] = $name.'="'.htmlspecialchars($value, \ENT_QUOTES).'"';
+            }
+        }
 
-        return implode(' ', array_map(
-            static fn (string $k, bool|string $v) => true === $v ? $k : \sprintf('%s="%s"', $k, htmlspecialchars($v, \ENT_QUOTES)),
-            array_keys($attributes),
-            $attributes,
-        ));
+        return implode(' ', $parts);
     }
 }
