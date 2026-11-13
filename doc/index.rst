@@ -7,7 +7,8 @@ and `Rsbuild`_.
 .. tip::
 
     Still using Webpack Encore? See `Migrating from Webpack Encore`_ below: it maps every ``Encore.*`` call to its
-    Vite/Rsbuild or Reprise equivalent.
+    Vite/Rsbuild or Reprise equivalent. Coming from ``pentatrion/vite-bundle`` instead? See
+    `Migrating from pentatrion/vite-bundle`_.
 
 Vite and Rsbuild already handle **Sass/Less/PostCSS**, **TypeScript**, **JSX/Vue/Svelte**, **code splitting**,
 **content hashing**, **source maps**, **minification** and **HMR** on their own, so Symfony Reprise does not
@@ -970,6 +971,233 @@ A few Encore features have no direct replacement:
   ``configureCssMinimizerPlugin()``, ``configureJsMinimizerPlugin()``, ``configureFriendlyErrorsPlugin()``): tuned
   Webpack internals that Reprise and the bundlers now own; nothing to port.
 
+Migrating from pentatrion/vite-bundle
+-------------------------------------
+
+`pentatrion/vite-bundle`_ and its companion `vite-plugin-symfony`_ brought Vite to Symfony long before Reprise
+existed, and most of their shape carries over: Twig functions that render an entry's tags, a plugin that writes the
+file the bundle reads, Stimulus controllers registered from ``controllers.json``. Moving to Reprise means swapping
+both packages, renaming the Twig functions and deleting the setup Reprise now does on its own. A few features have no
+counterpart. They are listed in `No direct replacement`_, so check them before you start.
+
+Before you start
+~~~~~~~~~~~~~~~~
+
+Reprise needs PHP 8.4 or later, Symfony 7.4 or 8, Vite 7 or 8, and Node.js 22.18+, 24.11+ or 26+. The pentatrion
+packages run down to PHP 8.0, Symfony 4.4 and Vite 3, so upgrade those first if needed.
+
+Reprise only renders ES modules. If you build with ``@vitejs/plugin-legacy``, there is no equivalent.
+
+The examples below keep Vite. Once you are on Reprise, moving to `Rsbuild`_ only means swapping the bundler config
+(see `Installation`_).
+
+Swapping the bundle
+~~~~~~~~~~~~~~~~~~~
+
+Commit your work first. When Symfony Flex removes ``pentatrion/vite-bundle``, it deletes the files its recipe created,
+even if you edited them since: ``package.json``, ``vite.config.js``, ``assets/app.js``, ``assets/app.css`` and
+``config/routes/pentatrion_vite.yaml``. It also removes the ``vite_entry_*`` tags from ``templates/base.html.twig``.
+
+Then remove what still refers to the bundle, or the ``cache:clear`` that Composer runs after the removal fails: the
+``pentatrion_vite`` configuration, usually ``config/packages/pentatrion_vite.yaml`` (port its settings with the table
+below; it stays in your Git history), and the ``Pentatrion\ViteBundle\Asset\ViteAssetVersionStrategy`` version strategy
+under ``framework.assets``, if you used it. Restore the files you keep before installing Reprise, whose recipe never
+overwrites an existing file:
+
+.. code-block:: terminal
+
+    $ composer remove pentatrion/vite-bundle
+    $ git restore package.json vite.config.js assets/
+    $ composer require symfony/reprise
+
+Leave ``config/routes/pentatrion_vite.yaml`` deleted: Reprise has no dev-server proxy route, because the browser loads
+assets from the dev server directly.
+
+The Reprise recipe adds ``reprise_entry_link_tags('app')`` and ``reprise_entry_script_tags('app')`` to
+``templates/base.html.twig``. In your other templates, rename the functions:
+
+=============================================================  =================================================
+pentatrion/vite-bundle                                         Symfony Reprise
+=============================================================  =================================================
+``vite_entry_link_tags('app')``                                ``reprise_entry_link_tags('app')``
+``vite_entry_script_tags('app')``                              ``reprise_entry_script_tags('app')``
+``vite_entry_script_tags('app', { attr: { defer: true } })``   ``reprise_entry_script_tags('app', attributes={ defer: true })``
+``vite_entry_script_tags('app', {}, 'admin')``                 ``reprise_entry_script_tags('app', build='admin')``
+``vite_entry_script_tags('app', { dependency: 'react' })``     ``reprise_entry_script_tags('app')``
+``vite_mode()``                                                none, see `No direct replacement`_
+=============================================================  =================================================
+
+``dependency: 'react'`` is no longer needed: when ``@vitejs/plugin-react`` is in your Vite plugins, Reprise renders
+the React Fast Refresh preamble in dev on its own.
+
+The bundle configuration moves from ``pentatrion_vite`` to ``reprise`` (see `Configuration`_):
+
+==================================================  ========================================================================
+``pentatrion_vite``                                 ``reprise``
+==================================================  ========================================================================
+``public_directory`` and ``build_directory``        ``output_path``, a single absolute path (default ``%kernel.project_dir%/public/build``)
+``configs`` and ``default_config``                  ``builds``, selected with the ``build`` Twig argument (see `Multiple builds`_)
+``throw_on_missing_entry``                          ``strict_mode``, now ``true`` by default
+``throw_on_missing_asset``                          ``framework.assets.strict_mode``, lenient by default (see `Behavior changes`_)
+``cache``                                           ``cache``
+``preload: link-header``                            ``preload: true``
+``crossorigin``                                     ``crossorigin``, applied only together with SRI
+``script_attributes`` and ``link_attributes``       ``script_attributes`` and ``link_attributes``
+``absolute_url``                                    none: ``framework.assets.base_urls`` gives a fixed absolute host, not the current request's
+``proxy_origin``                                    the plugin's ``devServerOrigin`` (see `Reaching the dev server through another address`_)
+``preload_attributes``                              none, see `No direct replacement`_
+==================================================  ========================================================================
+
+For ``asset()``, point Symfony at Reprise's ``manifest.json`` with ``framework.assets.json_manifest_path`` (see
+`File copy`_). Manifest keys start with the public path: an image imported from your JavaScript or CSS as
+``assets/images/avatar.jpg`` is now ``asset('build/assets/images/avatar.jpg')``. However, imported files only get a
+manifest key in the production build, since in dev they live in the dev server's memory. For files your templates
+reference directly, list their directory under the plugin's ``copy`` option instead: copied files are on disk and in
+the manifest in both modes.
+
+Swapping the Vite plugin
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Swap the npm package:
+
+.. code-block:: terminal
+
+    $ npm uninstall vite-plugin-symfony
+    $ npm install @symfony/reprise --save-dev
+
+Then swap the plugin in ``vite.config.js``. Your entries stay as they are:
+
+.. code-block:: javascript
+
+    // vite.config.js
+    import { defineConfig } from 'vite'
+    import Symfony from '@symfony/reprise/vite'
+
+    export default defineConfig({
+      build: {
+        rollupOptions: {
+          input: {
+            app: './assets/app.js',
+          },
+        },
+      },
+      plugins: [
+        Symfony(),
+      ],
+    })
+
+Like ``vite-plugin-symfony``, Reprise builds into ``public/build`` and serves it under ``/build/`` by default, so a
+standard project needs no option. Reprise sets Vite's ``base`` and ``build.outDir`` itself. If you changed them, move
+the values to the plugin's ``publicPath`` and ``outputPath`` options.
+
+=============================================================  =================================================
+vite-plugin-symfony                                            @symfony/reprise/vite
+=============================================================  =================================================
+``stimulus: true`` or ``stimulus: { controllersFilePath }``    ``stimulus: 'assets/controllers.json'`` (see `Moving Stimulus controllers`_)
+``sriAlgorithm: 'sha384'``                                     ``integrity: { enabled: true }`` (see `Subresource Integrity`_)
+``originOverride``                                             ``devServerOrigin``
+``viteDevServerHostname``                                      nothing to port, or ``devServerOrigin``
+``exposedEnvVars``                                             Vite's ``define`` or ``envPrefix``
+``refresh``                                                    none, see `No direct replacement`_
+``servePublic``, ``debug``                                     nothing to port
+``enforcePluginOrderingPosition``                              nothing to port
+``enforceServerOriginAfterListening``                          nothing to port, Reprise always does it
+=============================================================  =================================================
+
+Moving Stimulus controllers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Point the plugin at your ``controllers.json``. The path is required, ``stimulus: true`` is not accepted:
+
+.. code-block:: javascript
+
+    Symfony({
+      stimulus: 'assets/controllers.json',
+    })
+
+Reprise registers your local controllers itself, so the bootstrap code shrinks to one call:
+
+.. code-block:: javascript
+
+    // before
+    import { startStimulusApp, registerControllers } from 'vite-plugin-symfony/stimulus/helpers'
+
+    const app = startStimulusApp()
+    registerControllers(app, import.meta.glob('./controllers/*_controller.js', { query: '?stimulus', eager: true }))
+
+    // after
+    import { startStimulusApp } from '@symfony/reprise/stimulus'
+
+    const app = startStimulusApp()
+
+Then, in your controllers:
+
+- Replace ``import.meta.stimulusFetch = 'lazy'`` with a ``/* stimulusFetch: 'lazy' */`` comment (see
+  `Symfony UX / Stimulus controllers`_), and drop the ``vite-plugin-symfony/stimulus/env`` type reference.
+- Register controllers you imported with ``?stimulus`` through the returned application instead:
+  ``app.register('clipboard', Clipboard)``.
+- Identifiers still come from the filename, relative to the controllers directory: ``hello_controller.js`` is
+  ``hello``, ``admin/user_controller.js`` is ``admin--user``.
+
+For UX React and UX Vue, import ``registerReactControllerComponents`` and ``registerVueControllerComponents`` from
+``@symfony/ux-react`` and ``@symfony/ux-vue`` instead of ``vite-plugin-symfony/stimulus/helpers/react`` and
+``vite-plugin-symfony/stimulus/helpers/vue``:
+
+.. code-block:: javascript
+
+    import { startStimulusApp } from '@symfony/reprise/stimulus'
+    import { registerReactControllerComponents } from '@symfony/ux-react'
+
+    registerReactControllerComponents(import.meta.glob('./react/controllers/**/*.{jsx,tsx}', { eager: true }))
+
+    startStimulusApp()
+
+In ``controllers.json``, a controller without an ``enabled`` key now counts as enabled, and the ``module`` override is
+not supported. Third-party controllers resolve from ``node_modules``, including ``@symfony/ux-react`` and
+``@symfony/ux-svelte``, which ``vite-plugin-symfony`` used to provide itself.
+
+Behavior changes
+~~~~~~~~~~~~~~~~
+
+Some defaults and behaviors change without any error to tell you:
+
+- **Missing entries throw.** ``strict_mode`` defaults to ``true``, while ``throw_on_missing_entry`` defaulted to
+  ``false``. Set ``strict_mode: false`` to keep rendering nothing, or guard optional entries with
+  ``reprise_entry_exists()``.
+- **crossorigin follows SRI.** It is only added to tags that carry an ``integrity`` attribute, and ``true`` is not a
+  valid value anymore. pentatrion added it to every tag by default; use ``script_attributes`` and
+  ``link_attributes`` to keep that.
+- **Preload links come with the scripts.** ``reprise_entry_script_tags`` renders the ``<link rel="modulepreload">``
+  tags, not ``reprise_entry_link_tags``, and always renders them: ``preload: false`` only turns off the HTTP ``Link:``
+  header.
+- **asset() keys change, and lookups turn lenient.** Keys start with the public path (see `Swapping the bundle`_).
+  pentatrion threw on an unknown ``asset()`` path by default, while Symfony's manifest lookup returns it unchanged.
+  Setting ``framework.assets.strict_mode: true`` brings the error back, but also rejects the entry tags unless
+  ``reprise.asset_package`` points at a package with ``version: false`` (see `File copy`_).
+- **RenderAssetTagEvent moved** to ``Symfony\Reprise\Event\RenderAssetTagEvent``, with a smaller API: listeners read
+  and write ``$event->attributes`` and check ``isScript()``, ``isLink()`` or ``isModulepreload()``. There is no
+  ``getTag()``, ``isBuild()`` or render flag (see `Customizing rendered tags`_).
+- **Stimulus reloads the page in dev** when a controller changes, instead of hot-replacing it.
+
+No direct replacement
+~~~~~~~~~~~~~~~~~~~~~
+
+- ``vite_mode()``: no Twig function tells dev from build. Branch on ``app.environment`` for dev-only markup.
+- ``refresh`` (reloading the page when a Twig template changes): add a Vite plugin such as
+  `vite-plugin-full-reload`_ watching ``templates/**/*.twig``.
+- ``@vitejs/plugin-legacy``: Reprise renders ES modules only, with no ``nomodule`` or polyfill tags.
+- Hot replacement of Stimulus controllers (the ``hmr`` option): a change reloads the page.
+- ``identifierResolutionMethod``, ``import.meta.stimulusIdentifier`` and ``import.meta.stimulusEnabled``: the
+  identifier always comes from the filename. Rename the file to change it, or move it out of the controllers directory
+  to disable it.
+- ``vite-plugin-symfony/stimulus/helpers/svelte`` and ``svelte4``: Reprise has no Svelte helper of its own.
+- ``preloadDynamicImports``: dynamic imports are not preloaded.
+- ``preload: none`` and ``preload_attributes``: ``modulepreload`` links are always rendered, and only receive the
+  ``nonce``. Set other attributes from a ``RenderAssetTagEvent`` listener, using ``isModulepreload()``.
+- Per-config ``script_attributes`` and ``link_attributes``: they are global. Pass ``attributes`` per call, or use a
+  listener.
+- The profiler panel.
+
 Backward Compatibility promise
 ------------------------------
 
@@ -981,3 +1209,6 @@ https://symfony.com/doc/current/contributing/code/bc.html
 .. _`@symfony/stimulus-bridge`: https://github.com/symfony/stimulus-bridge
 .. _WebpackEncoreBundle: https://github.com/symfony/webpack-encore-bundle
 .. _`symfony/web-link`: https://symfony.com/doc/current/web_link.html
+.. _`pentatrion/vite-bundle`: https://github.com/lhapaipai/vite-bundle
+.. _vite-plugin-symfony: https://github.com/lhapaipai/vite-plugin-symfony
+.. _vite-plugin-full-reload: https://github.com/ElMassimo/vite-plugin-full-reload
