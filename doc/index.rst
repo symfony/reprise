@@ -92,6 +92,24 @@ Rsbuild
       ],
     })
 
+Keeping both packages in sync
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``symfony/reprise`` Composer package and the ``@symfony/reprise`` npm package are tagged together from the same
+commit and share one version number.
+
+Their only contract is the ``entrypoints.json`` and ``manifest.json`` files the plugin writes and RepriseBundle reads.
+That format is covered by the `Backward Compatibility promise`_, so a change on one side does not break the other
+within a major version. A minor or patch mismatch between the two packages keeps working.
+
+Unlike Symfony UX packages, Symfony Flex does not point your ``package.json`` at ``vendor/symfony/reprise/assets``.
+The npm package is an ordinary registry dependency, so ``composer update`` leaves it untouched. This is deliberate:
+publishing on npm keeps the package free of the constraints that come with shipping JavaScript from a Composer vendor
+directory.
+
+Upgrade both packages at the same time to the same version, so both halves of a feature land together. Renovate or
+Dependabot can group the two updates.
+
 Rendering asset tags
 --------------------
 
