@@ -17,10 +17,9 @@ updates:
     # npm, but only Reprise's internal dev/build tooling. The runtime dependency
     # (unplugin) and the peer dependencies (vite, @rsbuild/core, @hotwired/stimulus)
     # are semver-meaningful for consumers and bumped by hand, so they are excluded.
+    # The root pnpm workspace already covers assets/; a second /assets entry duplicated every PR.
     - package-ecosystem: 'npm'
-      directories:
-          - '/'
-          - '/assets'
+      directory: '/'
       schedule:
           interval: 'weekly'
       allow:
