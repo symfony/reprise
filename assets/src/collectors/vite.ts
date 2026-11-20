@@ -18,7 +18,7 @@ export function bundleToGraph(bundle: Rollup.OutputBundle, root: string): Normal
             // entry module uses top-level await); the CSS then rides on that statically-imported chunk, not the
             // facade. Walk static imports so entry CSS is collected wherever Rollup parked it.
             const imports = staticImports(chunk, bundle);
-            const css = collectEntryCss([chunk.fileName, ...imports], bundle);
+            const css = collectEntryCss(chunk, bundle);
             for (const name of css) entryCss.add(name);
             // Vite drops a style entry's empty JS chunk from the bundle *after* this hook, so advertising it
             // would render a `<script>` for a file that was never written (and break SRI, which hashes off disk).
@@ -71,15 +71,22 @@ function staticImports(entry: Rollup.OutputChunk, bundle: Rollup.OutputBundle): 
     return [...visited];
 }
 
-// Collect an entry's CSS: its own `importedCss` plus that of every statically-imported chunk, reached
-// transitively. Static imports only — dynamic-import CSS loads with its chunk and stays out of the entry.
-function collectEntryCss(names: readonly string[], bundle: Rollup.OutputBundle): string[] {
+// Collect an entry's CSS in import order, like Vite's `getCssFilesForChunk`: imported chunks' CSS (depth-first)
+// before the importing chunk's own, so the entry's CSS overrides what it imports. Static imports only —
+// dynamic-import CSS loads with its chunk and stays out of the entry.
+function collectEntryCss(entry: Rollup.OutputChunk, bundle: Rollup.OutputBundle): string[] {
     const css = new Set<string>();
-    for (const name of names) {
-        const output = bundle[name];
-        if (output?.type !== 'chunk') continue;
-        for (const file of output.viteMetadata?.importedCss ?? []) css.add(file);
-    }
+    const visited = new Set<string>();
+    const walk = (chunk: Rollup.OutputChunk): void => {
+        if (visited.has(chunk.fileName)) return;
+        visited.add(chunk.fileName);
+        for (const imported of chunk.imports) {
+            const dep = bundle[imported];
+            if (dep?.type === 'chunk') walk(dep);
+        }
+        for (const file of chunk.viteMetadata?.importedCss ?? []) css.add(file);
+    };
+    walk(entry);
     return [...css];
 }
 
