@@ -165,11 +165,32 @@ describe('bundleToGraph', () => {
 
         const graph = bundleToGraph(bundle, '/app');
 
-        expect(graph.entryPoints.app.css).toEqual(['mid.css', 'leaf.css']);
+        expect(graph.entryPoints.app.css).toEqual(['leaf.css', 'mid.css']);
         expect(graph.entryPoints.app.preload).toEqual(['mid.js', 'leaf.js']);
         // Both stay in the manifest (keyed by name), not dropped as async chunk CSS.
         expect(graph.assets).toContainEqual({ logicalName: 'mid.css', fileName: 'mid.css' });
         expect(graph.assets).toContainEqual({ logicalName: 'leaf.css', fileName: 'leaf.css' });
+    });
+
+    it('lists an imported chunk CSS before the entry own CSS, in import order', () => {
+        // `app.js` imports a shared chunk (vendor CSS) then its own CSS, so the app CSS must come last to
+        // override the vendor rules, as Vite's HTML plugin and Webpack Encore order them.
+        const bundle = {
+            'app.js': {
+                ...chunk({ fileName: 'app.js', name: 'app', isEntry: true, imports: ['shared.js'] }),
+                viteMetadata: { importedCss: new Set(['app.css']), importedAssets: new Set() },
+            },
+            'shared.js': {
+                ...chunk({ fileName: 'shared.js', name: 'shared', isEntry: false }),
+                viteMetadata: { importedCss: new Set(['vendor.css']), importedAssets: new Set() },
+            },
+            'app.css': asset('app.css', ['app.css']),
+            'vendor.css': asset('vendor.css', ['vendor.css']),
+        } as unknown as Rollup.OutputBundle;
+
+        const graph = bundleToGraph(bundle, '/app');
+
+        expect(graph.entryPoints.app.css).toEqual(['vendor.css', 'app.css']);
     });
 
     it('never preloads the entry itself when a chunk it imports imports it back', () => {
