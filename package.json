@@ -26,6 +26,6 @@
   },
   "devDependencies": {
     "oxfmt": "^0.71.0",
-    "oxlint": "^1.85.0"
+    "oxlint": "^1.93.0"
   }
 }
