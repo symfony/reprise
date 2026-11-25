@@ -23,7 +23,7 @@
         "symfony/http-foundation": "^7.4|^8.0",
         "symfony/http-kernel": "^7.4|^8.0",
         "symfony/service-contracts": "^3",
-        "twig/twig": "^3.0"
+        "twig/twig": "^3.0|^4.0"
     },
     "require-dev": {
         "symfony/framework-bundle": "^7.4|^8.0",

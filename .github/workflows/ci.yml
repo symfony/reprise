@@ -150,7 +150,7 @@ jobs:
               run: pnpm test
 
     php:
-        name: PHP ${{ matrix.php-version }} + Symfony ${{ matrix.symfony-version }}${{ matrix.dependency-version == 'lowest' && ' lowest' || '' }} on ${{ matrix.os || 'ubuntu-latest' }}
+        name: PHP ${{ matrix.php-version }} + Symfony ${{ matrix.symfony-version }}${{ matrix.twig-version && format(' + Twig {0}', matrix.twig-version) || '' }}${{ matrix.dependency-version == 'lowest' && ' lowest' || '' }} on ${{ matrix.os || 'ubuntu-latest' }}
         needs: changes
         if: needs.changes.outputs.php == 'true'
         runs-on: ${{ matrix.os || 'ubuntu-latest' }}
@@ -170,6 +170,11 @@ jobs:
                       symfony-version: 7.4.*
                     - php-version: '8.5'
                       symfony-version: 8.1.*
+
+                    # prefer-stable skips Twig 4 while it is only in beta, so this row forces it.
+                    - php-version: '8.5'
+                      symfony-version: 8.1.*
+                      twig-version: ^4.0
 
                     # Windows
                     - php-version: '8.4'
@@ -195,7 +200,7 @@ jobs:
               uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
               with:
                   dependency-versions: ${{ matrix.dependency-version == 'lowest' && 'lowest' || 'highest' }}
-                  composer-options: --prefer-dist
+                  composer-options: --prefer-dist${{ matrix.twig-version && format(' --with=twig/twig:{0}', matrix.twig-version) || '' }}
                   custom-cache-suffix: ${{ matrix.symfony-version }}
             - name: PHPUnit
               run: vendor/bin/phpunit
